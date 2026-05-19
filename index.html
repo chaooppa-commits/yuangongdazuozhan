@@ -86,6 +86,9 @@
     <div class="stats-grid" id="stats-grid">
       <!-- Rendered dynamically -->
     </div>
+    <div class="action-summary" id="action-summary">
+      <!-- 出手规范分析 -->
+    </div>
     <div class="end-actions">
       <button class="end-btn secondary" onclick="downloadLog()">日志</button>
       <button class="end-btn secondary" onclick="showAnalysis()">分析</button>
@@ -472,6 +475,24 @@
           <div class="stat-label">押注分布</div>
         </div>
       `;
+
+      // 出手规范分析总结
+      const actionStats = getActionStats();
+      const summaryDiv = document.getElementById('action-summary');
+      let summaryHtml = '<div class="action-summary-title">出手规范分析</div>';
+      summaryHtml += '<div class="action-summary-grid">';
+      for (const tag of ['理性', '冒进', '保守']) {
+        const s = actionStats[tag];
+        const pct = s.count > 0 ? (s.win / s.count * 100).toFixed(0) + '%' : '-';
+        const tagCls = tag === '理性' ? 'tag-rational' : tag === '冒进' ? 'tag-aggressive' : 'tag-conservative';
+        summaryHtml += `<div class="action-summary-item">`;
+        summaryHtml += `<span class="action-tag ${tagCls}">${tag}</span>`;
+        summaryHtml += `<span class="action-summary-count">${s.count}局</span>`;
+        summaryHtml += `<span class="action-summary-pct">准确率 ${pct}</span>`;
+        summaryHtml += `</div>`;
+      }
+      summaryHtml += '</div>';
+      summaryDiv.innerHTML = summaryHtml;
     }
 
     // ═══════════════════════════════════════════════════════
