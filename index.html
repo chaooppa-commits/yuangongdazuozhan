@@ -147,7 +147,7 @@
     // Render Functions
     // ═══════════════════════════════════════════════════════
 
-    function renderGameScreen(settlement) {
+    function renderGameScreen(settlement, actionEval) {
       showScreen('game-screen');
 
       document.getElementById('round-num').textContent = game.roundNo;
@@ -164,7 +164,7 @@
       renderPnlChart();
 
       if (settlement && game.phase === 'result') {
-        renderResult(settlement);
+        renderResult(settlement, actionEval);
       } else {
         document.getElementById('result-section').classList.remove('show');
       }
@@ -246,7 +246,7 @@
       table.innerHTML = html;
     }
 
-    function renderResult(settlement) {
+    function renderResult(settlement, actionEval) {
       const section = document.getElementById('result-section');
       section.classList.add('show');
 
@@ -262,6 +262,33 @@
           html += `<div class="result-banner lose">${pnl} 员工${target}负</div>`;
         }
       }
+
+      // 动作评价标签
+      if (actionEval) {
+        const tagClass = actionEval.tag === '理性' ? 'tag-rational' : actionEval.tag === '冒进' ? 'tag-aggressive' : 'tag-conservative';
+        html += `<div class="action-eval-row">`;
+        html += `<span class="action-tag ${tagClass}">${actionEval.tag}</span>`;
+        html += `<span class="action-reason">${actionEval.reason}</span>`;
+        html += `</div>`;
+      }
+
+      // 本局出手统计
+      const actionStats = getActionStats();
+      html += `<div class="action-stats">`;
+      html += `<div class="action-stats-title">本局出手规范统计</div>`;
+      html += `<div class="action-stats-grid">`;
+      for (const tag of ['理性', '冒进', '保守']) {
+        const s = actionStats[tag];
+        const pct = s.count > 0 ? (s.win / s.count * 100).toFixed(0) + '%' : '-';
+        const tagCls = tag === '理性' ? 'tag-rational' : tag === '冒进' ? 'tag-aggressive' : 'tag-conservative';
+        html += `<div class="action-stats-item">`;
+        html += `<span class="action-tag ${tagCls}">${tag}</span>`;
+        html += `<span class="action-stats-count">${s.count}局</span>`;
+        html += `<span class="action-stats-pct">${pct}</span>`;
+        html += `</div>`;
+      }
+      html += `</div>`;
+      html += `</div>`;
 
       html += `<div class="structure-list">`;
       const labels = ['Boss', 'A', 'B', 'C'];
@@ -475,7 +502,7 @@
       ctx.clearRect(0, 0, w, h);
 
       const zeroY = h - ((0 - minVal) / range) * (h - 8) - 4;
-      ctx.strokeStyle = 'rgba(136,146,164,0.3)';
+      ctx.strokeStyle = 'rgba(156,163,175,0.3)';
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -484,7 +511,7 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
-      ctx.strokeStyle = data[data.length - 1] >= 0 ? '#00c897' : '#e94560';
+      ctx.strokeStyle = data[data.length - 1] >= 0 ? '#10b981' : '#f43f5e';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       for (let i = 0; i < data.length; i++) {
@@ -500,7 +527,7 @@
       ctx.lineTo(lastX, zeroY);
       ctx.lineTo(0, zeroY);
       ctx.closePath();
-      ctx.fillStyle = data[data.length - 1] >= 0 ? 'rgba(0,200,151,0.1)' : 'rgba(233,69,96,0.1)';
+      ctx.fillStyle = data[data.length - 1] >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)';
       ctx.fill();
     }
 
