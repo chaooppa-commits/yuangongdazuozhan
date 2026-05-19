@@ -183,24 +183,27 @@ function placeBet(target, amount) {
   // Reveal
   game.phase = 'revealing';
   renderGameScreen();
-
+  
   // Short delay then show result
   setTimeout(() => {
     const settlement = settle(game.hands, game.currentBet.target, game.currentBet.amount);
     const { observerPnl, bossPnl } = settlement;
-
+  
     game.obsPurse += observerPnl;
     game.bossPurse += bossPnl;
-
+  
     if (game.currentBet.target !== 'SKIP') {
       if (observerPnl > 0) game.stats.win++;
       else game.stats.lose++;
     }
-
+  
     // Track PnL
     const cumPnl = game.pnlHistory[game.pnlHistory.length - 1] + observerPnl;
     game.pnlHistory.push(cumPnl);
-
+  
+    // Evaluate action
+    const actionEval = evaluateAction(game.hands, game.currentBet.target, game.currentBet.amount);
+  
     // Log round
     pushLog({
       type: 'round',
@@ -224,6 +227,7 @@ function placeBet(target, amount) {
       bossPnl,
       observerPurseAfter: game.obsPurse,
       bossPurseAfter: game.bossPurse,
+      actionEval,
       // Extra fields for analysis
       empWinCount: ['A','B','C'].filter(l => settlement.employeeResults[l].won).length,
       empWith10pts: ['A','B','C'].filter(l => {
@@ -231,10 +235,10 @@ function placeBet(target, amount) {
         return er.won && er.mult >= 2;
       }).length
     });
-
+  
     game.phase = 'result';
-    renderGameScreen(settlement);
-
+    renderGameScreen(settlement, actionEval);
+  
     // Check termination
     if (game.obsPurse <= 0) {
       setTimeout(() => endGame('observer_broke'), 1500);
@@ -368,6 +372,137 @@ const CORRECTED_TABLE = {
 function lookupTier(a, b) {
   const key = [Math.min(a,b), Math.max(a,b)].join(',');
   return CORRECTED_TABLE[key] || null;
+}
+
+// ═══════════════════════════════════════════════════════
+// Action Evaluation (出手规范分析)
+// ═══════════════════════════════════════════════════════
+
+const TIER_VALUE = { 'S+': 5, 'S': 4, 'A': 3, 'B': 2, 'C': 1 };
+
+function getPlayerPower(hand) {
+  const v = [hand[0], hand[1]];
+  return lookupTier(v[0], v[1]);
+}
+
+function evaluateAction(hands, betTarget, betAmount) {
+  const bossInfo = getPlayerPower(hands[0]);
+  const empInfos = {
+    A: getPlayerPower(hands[1]),
+    B: getPlayerPower(hands[2]),
+    C: getPlayerPower(hands[3])
+  };
+
+  const bossRate = bossInfo ? bossInfo.correctedRate : 40;
+  const bossTierVal = bossInfo ? (TIER_VALUE[bossInfo.tier] || 3) : 3;
+
+  // 计算每个员工vs老板的战力差
+  const gaps = {};
+  for (const lbl of ['A', 'B', 'C']) {
+    const info = empInfos[lbl];
+    if (info) {
+      gaps[lbl] = {
+        rateDiff: info.correctedRate - bossRate,
+        tierDiff: (TIER_VALUE[info.tier] || 3) - bossTierVal,
+        tier: info.tier,
+        rate: info.correctedRate
+      };
+    } else {
+      gaps[lbl] = { rateDiff: 0, tierDiff: 0, tier: '-', rate: 0 };
+    }
+  }
+
+  // 找最佳员工
+  let bestLbl = null;
+  let bestGap = -999;
+  for (const lbl of ['A', 'B', 'C']) {
+    const g = gaps[lbl].rateDiff;
+    if (g > bestGap) { bestGap = g; bestLbl = lbl; }
+  }
+
+  // 判断是否存在"明显机会"
+  const hasClearOpportunity = ['A','B','C'].some(lbl => {
+    const g = gaps[lbl];
+    return g.rateDiff >= 5 && g.tierDiff >= 1;
+  });
+
+  // 判断是否存在"明显优势机会"
+  const hasStrongOpportunity = ['A','B','C'].some(lbl => {
+    const g = gaps[lbl];
+    return g.rateDiff >= 8 || g.tierDiff >= 2;
+  });
+
+  // 老板是否是明显弱势
+  const bossIsWeak = bossInfo && (bossInfo.tier === 'C' || bossInfo.correctedRate <= 37);
+
+  // ─── 用户选择SKIP ───
+  if (betTarget === 'SKIP') {
+    if (hasClearOpportunity || bossIsWeak) {
+      return { tag: '保守', reason: '明显优势机会却选择观望' };
+    }
+    return { tag: '理性', reason: '无明显战力优势，跳过合理' };
+  }
+
+  // ─── 用户下注 ───
+  const sel = gaps[betTarget];
+
+  // 冒进：选中员工没有明显优势
+  if (sel.rateDiff < 3 || sel.tierDiff <= 0) {
+    if (betAmount >= 8) {
+      return { tag: '冒进', reason: '战力不占优却重注出击' };
+    }
+    return { tag: '冒进', reason: '选中员工战力不优于老板' };
+  }
+
+  // 冒进：明明有更好选择却选了弱的
+  if (bestLbl && bestLbl !== betTarget && gaps[bestLbl].rateDiff - sel.rateDiff >= 5) {
+    return { tag: '冒进', reason: '有更强员工未选，选择欠妥' };
+  }
+
+  // 保守：明显优势却出手太轻
+  if (hasStrongOpportunity && betAmount <= 4) {
+    return { tag: '保守', reason: '明显优势下出手太轻' };
+  }
+
+  // 保守：选了正确员工但注码偏小
+  if (sel.rateDiff >= 8 && betAmount <= 4) {
+    return { tag: '保守', reason: '战力差显著，该重注' };
+  }
+
+  // 理性
+  if (sel.rateDiff >= 5 && sel.tierDiff >= 1) {
+    return { tag: '理性', reason: '战力差明显，出手合理' };
+  }
+  if (bossIsWeak && sel.rateDiff >= 0) {
+    return { tag: '理性', reason: '老板弱势，出击合理' };
+  }
+  return { tag: '理性', reason: '出手符合规范' };
+}
+
+function getActionStats() {
+  const roundLogs = game.log.filter(e => e.type === 'round');
+  const stats = { 理性: { count: 0, win: 0 }, 冒进: { count: 0, win: 0 }, 保守: { count: 0, win: 0 } };
+
+  for (const r of roundLogs) {
+    if (!r.actionEval) continue;
+    const tag = r.actionEval.tag;
+    if (!stats[tag]) continue;
+    stats[tag].count++;
+    // 赢了算对：observerPnl > 0（下注赢）或正确跳过（observerPnl === 0 且没有员工赢）
+    if (r.betTarget === 'SKIP') {
+      // 保守跳过：如果那局有员工赢，算错；否则算对
+      const anyEmpWin = r.empWinCount > 0;
+      if (tag === '保守' && !anyEmpWin) stats[tag].win++;
+      else if (tag === '理性' && !anyEmpWin) stats[tag].win++;
+      else if (tag === '保守' && anyEmpWin) { /*错*/ }
+      else if (tag === '理性' && anyEmpWin) { /*错*/ }
+    } else {
+      // 下注回合：赢了就算对
+      if (r.observerPnl > 0) stats[tag].win++;
+    }
+  }
+
+  return stats;
 }
 
 // ═══════════════════════════════════════════════════════
