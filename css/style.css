@@ -846,6 +846,55 @@ html, body {
   color: var(--text-dim);
 }
 
+/* ═══════ End Screen Action Summary ═══════ */
+.action-summary {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto 20px;
+  padding: 14px;
+  background: var(--bg2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.action-summary-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.action-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.action-summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 4px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 10px;
+}
+
+.action-summary-count {
+  font-size: 0.85rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.action-summary-pct {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
 /* ═══════ Analysis Modal ═══════ */
 .modal-overlay {
   display: none;
