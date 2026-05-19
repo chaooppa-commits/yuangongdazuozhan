@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>斗老板</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ═══════ Start Screen ═══════ -->
+  <div id="start-screen">
+    <h1>斗老板</h1>
+    <p class="subtitle">观察者视角模拟器</p>
+
+    <div class="config-group">
+      <label>策略模式</label>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="manual" onclick="selectMode('manual')">
+          手动
+          <div class="mode-desc">2/4/8 自选</div>
+        </button>
+        <button class="mode-btn" data-mode="kelly" onclick="selectMode('kelly')">
+          Kelly
+          <div class="mode-desc">半Kelly 20%</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="config-group">
+      <label>随机种子 (留空=随机)</label>
+      <input type="text" class="seed-input" id="seed-input" placeholder="输入数字或留空">
+    </div>
+
+    <button class="start-btn" onclick="onStart()">开始对决</button>
+  </div>
+
+  <!-- ═══════ Game Screen ═══════ -->
+  <div id="game-screen">
+    <!-- Top bar -->
+    <div class="top-bar">
+      <div class="round-info">
+        <span>第</span> <span class="round-num" id="round-num">1</span> <span>局</span>
+      </div>
+      <div class="purse-display">
+        <div class="purse-item">
+          <div class="purse-label">观察者</div>
+          <div class="purse-value obs" id="obs-purse">$50</div>
+          <div class="purse-bar"><div class="purse-bar-fill obs" id="obs-bar" style="width:50%"></div></div>
+        </div>
+        <div class="purse-item">
+          <div class="purse-label">老板</div>
+          <div class="purse-value boss" id="boss-purse">$50</div>
+          <div class="purse-bar"><div class="purse-bar-fill boss" id="boss-bar" style="width:50%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PnL chart -->
+    <div class="pnl-chart">
+      <canvas id="pnl-canvas"></canvas>
+    </div>
+
+    <!-- Card table -->
+    <div class="card-table" id="card-table">
+      <!-- Rendered dynamically -->
+    </div>
+
+    <!-- Result section (hidden until reveal) -->
+    <div class="result-section" id="result-section">
+      <!-- Rendered dynamically -->
+    </div>
+
+    <!-- Action bar -->
+    <div class="action-bar" id="action-bar">
+      <!-- Rendered dynamically -->
+    </div>
+  </div>
+
+  <!-- ═══════ End Screen ═══════ -->
+  <div id="end-screen">
+    <h2 id="end-title">对决结束</h2>
+    <p class="end-subtitle" id="end-subtitle"></p>
+    <div class="stats-grid" id="stats-grid">
+      <!-- Rendered dynamically -->
+    </div>
+    <div class="end-actions">
+      <button class="end-btn secondary" onclick="downloadLog()">日志</button>
+      <button class="end-btn secondary" onclick="showAnalysis()">分析</button>
+      <button class="end-btn primary" onclick="backToStart()">再来一局</button>
+    </div>
+  </div>
+
+  <!-- ═══════ Analysis Modal ═══════ -->
+  <div class="modal-overlay" id="analysis-modal" onclick="closeAnalysis(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>对局分析</h3>
+        <button class="modal-close" onclick="closeAnalysis()">&times;</button>
+      </div>
+      <div class="modal-body" id="analysis-body">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <script src="js/game.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // ═══════════════════════════════════════════════════════
+    // UI Controller
+    // ═══════════════════════════════════════════════════════
+
+    let selectedMode = 'manual';
+
+    function selectMode(mode) {
+      selectedMode = mode;
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+    }
+
+    function onStart() {
+      const seedStr = document.getElementById('seed-input').value.trim();
+      startGame(selectedMode === 'kelly', seedStr);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Screen Management
+    // ═══════════════════════════════════════════════════════
+
+    function showScreen(id) {
+      ['start-screen', 'game-screen', 'end-screen'].forEach(s => {
+        const el = document.getElementById(s);
+        el.style.display = (s === id) ? 'flex' : 'none';
+      });
+      window.scrollTo(0, 0);
+    }
+
+    function backToStart() {
+      showScreen('start-screen');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Render Functions
+    // ═══════════════════════════════════════════════════════
+
+    function renderGameScreen(settlement) {
+      showScreen('game-screen');
+
+      document.getElementById('round-num').textContent = game.roundNo;
+      document.getElementById('obs-purse').textContent = `$${game.obsPurse}`;
+      document.getElementById('boss-purse').textContent = `$${game.bossPurse}`;
+
+      const totalPurse = game.obsPurse + game.bossPurse;
+      const obsPct = Math.max(0, Math.min(100, (game.obsPurse / totalPurse) * 100));
+      const bossPct = Math.max(0, Math.min(100, (game.bossPurse / totalPurse) * 100));
+      document.getElementById('obs-bar').style.width = obsPct + '%';
+      document.getElementById('boss-bar').style.width = bossPct + '%';
+
+      renderCardTable(settlement);
+      renderPnlChart();
+
+      if (settlement && game.phase === 'result') {
+        renderResult(settlement);
+      } else {
+        document.getElementById('result-section').classList.remove('show');
+      }
+
+      renderActionBar();
+    }
+
+    function renderCardTable(settlement) {
+      const table = document.getElementById('card-table');
+      const isRevealed = game.phase === 'revealing' || game.phase === 'result';
+      const showTier = game.phase === 'result';
+      const isBetting = game.phase === 'betting';
+      const allVisibleCards = [];
+
+      game.hands.forEach((hand, i) => {
+        allVisibleCards.push(hand[0], hand[1]);
+      });
+
+      let html = '';
+      const labels = ['Boss', 'A', 'B', 'C'];
+      const labelClasses = ['boss', 'emp-a', 'emp-b', 'emp-c'];
+
+      for (let i = 0; i < 4; i++) {
+        const hand = game.hands[i];
+        const v = [hand[0], hand[1]];
+        const tierInfo = lookupTier(v[0], v[1]);
+        const tier = tierInfo ? tierInfo.tier : '-';
+
+        const blessings = blessingCards(v[0], v[1], allVisibleCards);
+        const blessingStr = blessings.map(b => `{${b.value}}\u00d7${b.remaining}`).join(' ');
+
+        const empLabel = labels[i];
+        const isEmp = i >= 1;
+        const isSelected = isBetting && isEmp && manualTarget === empLabel;
+        const clickable = isBetting && isEmp;
+
+        let rowClass = 'player-row';
+        if (i === 0) rowClass += ' boss-row';
+        if (isSelected) rowClass += ' selected-emp';
+        if (clickable) rowClass += ' clickable-emp';
+
+        const clickAttr = clickable ? ` onclick="selectEmployee('${empLabel}')"` : '';
+
+        html += `<div class="${rowClass}"${clickAttr}>`;
+        html += `<div class="player-label ${labelClasses[i]}">${labels[i]}</div>`;
+        html += `<div class="cards-display">`;
+        html += `<div class="card visible">${v[0]}</div>`;
+        html += `<div class="card visible">${v[1]}</div>`;
+
+        if (isRevealed) {
+          for (let j = 2; j < 5; j++) {
+            html += `<div class="card revealed">${hand[j]}</div>`;
+          }
+        } else {
+          for (let j = 2; j < 5; j++) {
+            html += `<div class="card hidden">?</div>`;
+          }
+        }
+        html += `</div>`;
+
+        if (showTier && tierInfo) {
+          html += `<span class="tier-badge tier-${tier}">${tier}</span>`;
+          html += `<div class="blessing-hint">${tierInfo.correctedRate.toFixed(0)}% ${tierInfo.ev >= 0 ? '+' : ''}${tierInfo.ev.toFixed(3)}</div>`;
+        } else if (isBetting && isSelected && tierInfo) {
+          html += `<span class="tier-badge tier-${tier}">${tier}</span>`;
+          html += `<div class="blessing-hint">${tierInfo.correctedRate.toFixed(0)}% ${tierInfo.ev >= 0 ? '+' : ''}${tierInfo.ev.toFixed(3)}</div>`;
+        } else {
+          html += `<div class="blessing-hint">${blessingStr || '-'}</div>`;
+        }
+
+        html += `</div>`;
+      }
+
+      // Stake picker shown below cards when employee selected
+      if (isBetting && manualTarget) {
+        html += buildStakePickerHtml(manualTarget);
+      }
+
+      table.innerHTML = html;
+    }
+
+    function renderResult(settlement) {
+      const section = document.getElementById('result-section');
+      section.classList.add('show');
+
+      let html = '';
+      const target = game.currentBet.target;
+      if (target === 'SKIP') {
+        html += `<div class="result-banner skip">- 跳过本局 -</div>`;
+      } else {
+        const pnl = settlement.observerPnl;
+        if (pnl > 0) {
+          html += `<div class="result-banner win">+${pnl} 员工${target}胜!</div>`;
+        } else {
+          html += `<div class="result-banner lose">${pnl} 员工${target}负</div>`;
+        }
+      }
+
+      html += `<div class="structure-list">`;
+      const labels = ['Boss', 'A', 'B', 'C'];
+      for (let i = 0; i < 4; i++) {
+        const struct = explainHand(game.hands[i]);
+        const v = [game.hands[i][0], game.hands[i][1]];
+        const ti = lookupTier(v[0], v[1]);
+        const tierStr = ti ? `<span class="tier-badge tier-${ti.tier}" style="font-size:0.65rem;padding:1px 4px">${ti.tier}</span> <span style="font-size:0.6rem;color:var(--text-dim)">${ti.correctedRate.toFixed(0)}%</span>` : '';
+        html += `<div class="structure-item">`;
+        html += `<div class="struct-label">${labels[i]} ${tierStr}</div>`;
+        html += `<div class="struct-text">${struct}</div>`;
+        html += `</div>`;
+      }
+      html += `</div>`;
+
+      html += `<div class="emp-results">`;
+      for (const lbl of ['A', 'B', 'C']) {
+        const er = settlement.employeeResults[lbl];
+        const cls = er.won ? 'emp-win' : 'emp-lose';
+        const mark = er.won ? '胜' : '负';
+        const multStr = er.won && er.mult > 1 ? ` \u00d7${er.mult}` : '';
+        html += `<div class="emp-result-row">`;
+        html += `<span class="emp-label">员工${lbl}</span>`;
+        html += `<span class="${cls}">${mark}${multStr}</span>`;
+        html += `<span class="emp-reason" style="font-size:0.7rem;color:var(--text-dim)">${er.reason}</span>`;
+        html += `</div>`;
+      }
+      html += `</div>`;
+
+      section.innerHTML = html;
+    }
+
+    function renderActionBar() {
+      const bar = document.getElementById('action-bar');
+
+      if (game.phase === 'betting') {
+        bar.innerHTML = `
+          <div class="action-row-single">
+            <button class="bet-btn btn-run-dim" onclick="confirmRun()">退场</button>
+            <button class="bet-btn btn-pass" onclick="onBet('SKIP',0)">跳过</button>
+          </div>
+        `;
+      } else if (game.phase === 'result') {
+        const gameOver = game.obsPurse <= 0 || game.bossPurse <= 0;
+        if (gameOver) {
+          bar.innerHTML = `
+            <div class="action-row-single">
+              <button class="continue-btn" onclick="endGame('normal')">查看结算</button>
+            </div>
+          `;
+        } else {
+          bar.innerHTML = `
+            <div class="action-row-single">
+              <button class="bet-btn btn-pass" onclick="showAnalysis()">分析</button>
+              <button class="continue-btn" onclick="nextRound()">下一局 →</button>
+            </div>
+          `;
+        }
+      } else {
+        bar.innerHTML = '';
+      }
+    }
+
+    function confirmRun() {
+      if (confirm('确认退场？')) {
+        onBet('RUN', 0);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Card-Click Employee Selection
+    // ═══════════════════════════════════════════════════════
+
+    let manualTarget = null;
+
+    function selectEmployee(target) {
+      if (game.phase !== 'betting') return;
+      // Toggle: clicking same employee deselects
+      if (manualTarget === target) {
+        manualTarget = null;
+      } else {
+        manualTarget = target;
+      }
+      renderCardTable();
+      renderActionBar();
+    }
+
+    function buildStakePickerHtml(target) {
+      const ks = game.kellyMode ? kellyStake(game.obsPurse, game.bossPurse) : 0;
+      let html = '<div class="stake-picker">';
+
+      if (game.kellyMode) {
+        html += `<span class="stake-picker-label">押${target}</span>`;
+        html += `<button class="bet-btn btn-stake-opt" onclick="onBetAndReset('${target}',${ks})">$${ks}</button>`;
+      } else {
+        const validStakes = STAKE_OPTIONS.filter(s => s <= game.obsPurse && s <= game.bossPurse);
+        html += `<span class="stake-picker-label">押${target}</span>`;
+        for (const s of validStakes) {
+          html += `<button class="bet-btn btn-stake-opt" onclick="onBetAndReset('${target}',${s})">$${s}</button>`;
+        }
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    function onBetAndReset(target, amount) {
+      manualTarget = null;
+      onBet(target, amount);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Bet Handler
+    // ═══════════════════════════════════════════════════════
+
+    function onBet(target, amount) {
+      placeBet(target, amount);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // End Screen
+    // ═══════════════════════════════════════════════════════
+
+    function renderEndScreen() {
+      showScreen('end-screen');
+
+      const netPnl = game.obsPurse - INITIAL_PURSE;
+
+      document.getElementById('end-title').textContent =
+        netPnl > 0 ? '赢了!' : netPnl < 0 ? '输了...' : '平局';
+      document.getElementById('end-title').style.color =
+        netPnl > 0 ? 'var(--green)' : netPnl < 0 ? 'var(--accent)' : 'var(--text)';
+
+      const exitMap = {
+        'normal': '达到最大局数',
+        'observer_broke': '荷包打空',
+        'boss_broke': '老板打空!',
+        'voluntary_run': '主动下场',
+        'interrupted': '中断'
+      };
+
+      document.getElementById('end-subtitle').textContent =
+        `${exitMap[game.exitReason] || game.exitReason} | 种子: ${game.seed}`;
+
+      const totalBet = game.stats.bet;
+      const winRate = totalBet > 0 ? (game.stats.win / totalBet * 100).toFixed(0) : 0;
+      const roi = game.stats.totalStaked > 0 ? (netPnl / game.stats.totalStaked * 100).toFixed(0) : 0;
+
+      const grid = document.getElementById('stats-grid');
+      grid.innerHTML = `
+        <div class="stat-card highlight">
+          <div class="stat-value">$${game.obsPurse}</div>
+          <div class="stat-label">最终筹码</div>
+        </div>
+        <div class="stat-card ${netPnl >= 0 ? 'positive' : 'negative'}">
+          <div class="stat-value">${netPnl >= 0 ? '+' : ''}${netPnl}</div>
+          <div class="stat-label">净盈亏</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${game.roundNo}</div>
+          <div class="stat-label">总局数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${totalBet}/${game.roundNo}</div>
+          <div class="stat-label">下注/跳过</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${winRate}%</div>
+          <div class="stat-label">胜率</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${roi}%</div>
+          <div class="stat-label">ROI</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${game.stats.win}/${game.stats.lose}</div>
+          <div class="stat-label">胜/负</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">A${game.stats.betTargetCount.A} B${game.stats.betTargetCount.B} C${game.stats.betTargetCount.C}</div>
+          <div class="stat-label">押注分布</div>
+        </div>
+      `;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // PnL Mini Chart
+    // ═══════════════════════════════════════════════════════
+
+    function renderPnlChart() {
+      const canvas = document.getElementById('pnl-canvas');
+      const ctx = canvas.getContext('2d');
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * 2;
+      canvas.height = rect.height * 2;
+      ctx.scale(2, 2);
+
+      const w = rect.width;
+      const h = rect.height;
+      const data = game.pnlHistory;
+
+      if (data.length < 2) {
+        ctx.clearRect(0, 0, w, h);
+        return;
+      }
+
+      const minVal = Math.min(...data, 0);
+      const maxVal = Math.max(...data, 0);
+      const range = Math.max(maxVal - minVal, 1);
+
+      ctx.clearRect(0, 0, w, h);
+
+      const zeroY = h - ((0 - minVal) / range) * (h - 8) - 4;
+      ctx.strokeStyle = 'rgba(136,146,164,0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, zeroY);
+      ctx.lineTo(w, zeroY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.strokeStyle = data[data.length - 1] >= 0 ? '#00c897' : '#e94560';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < data.length; i++) {
+        const x = (i / (data.length - 1)) * w;
+        const y = h - ((data[i] - minVal) / range) * (h - 8) - 4;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      const lastX = w;
+      const lastY = h - ((data[data.length - 1] - minVal) / range) * (h - 8) - 4;
+      ctx.lineTo(lastX, zeroY);
+      ctx.lineTo(0, zeroY);
+      ctx.closePath();
+      ctx.fillStyle = data[data.length - 1] >= 0 ? 'rgba(0,200,151,0.1)' : 'rgba(233,69,96,0.1)';
+      ctx.fill();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Analysis Modal
+    // ═══════════════════════════════════════════════════════
+
+    function showAnalysis() {
+      const a = analyzeSession();
+      if (!a) return;
+      renderAnalysis(a);
+      document.getElementById('analysis-modal').classList.add('show');
+    }
+
+    function closeAnalysis(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById('analysis-modal').classList.remove('show');
+    }
+
+    function pct(n, d) {
+      return d === 0 ? '-' : (n / d * 100).toFixed(0) + '%';
+    }
+
+    function renderAnalysis(a) {
+      const body = document.getElementById('analysis-body');
+
+      let stakeRows = '';
+      const stakes = Object.keys(a.byStake).sort((x, y) => Number(x) - Number(y));
+      for (const s of stakes) {
+        const d = a.byStake[s];
+        stakeRows += `<div class="analysis-row">
+          <span class="analysis-label">$${s} 注</span>
+          <span class="analysis-value">${d.wins}/${d.total}</span>
+          <span class="analysis-pct ${d.wins/d.total >= 0.5 ? 'positive' : 'negative'}">${pct(d.wins, d.total)}</span>
+        </div>`;
+      }
+
+      let empRows = '';
+      for (const t of ['A', 'B', 'C']) {
+        const d = a.empOverall[t];
+        if (!d || d.total === 0) continue;
+        const wr = d.wins / d.total;
+        empRows += `<div class="analysis-row">
+          <span class="analysis-label">员工${t}</span>
+          <span class="analysis-value">${d.wins}/${d.total}</span>
+          <span class="analysis-pct ${wr >= 0.5 ? 'positive' : 'negative'}">${pct(d.wins, d.total)}</span>
+        </div>`;
+      }
+
+      body.innerHTML = `
+        <div class="analysis-section">
+          <div class="analysis-section-title">择时 vs 自然胜率</div>
+          <div class="analysis-row highlight-row">
+            <span class="analysis-label">观察者(择时)</span>
+            <span class="analysis-value">${a.betWins}/${a.betRounds}</span>
+            <span class="analysis-pct ${a.betWinRate >= 50 ? 'positive' : 'negative'}">${a.betRounds > 0 ? a.betWinRate.toFixed(0) + '%' : '-'}</span>
+          </div>
+          ${empRows || '<div class="analysis-row"><span class="analysis-label">无数据</span></div>'}
+        </div>
+
+        <div class="analysis-section">
+          <div class="analysis-section-title">其他</div>
+          <div class="analysis-row">
+            <span class="analysis-label">PASS率</span>
+            <span class="analysis-value">${a.passRate.toFixed(0)}% (${a.skipRounds}/${a.totalRounds})</span>
+          </div>
+          <div class="analysis-row">
+            <span class="analysis-label">净盈亏</span>
+            <span class="analysis-value ${a.netPnl >= 0 ? 'positive' : 'negative'}">${a.netPnl >= 0 ? '+' : ''}${a.netPnl}</span>
+          </div>
+          ${stakeRows ? `<div class="analysis-row" style="margin-top:4px"><span class="analysis-label" style="font-weight:600">注码胜率</span></div>${stakeRows}` : ''}
+        </div>
+
+        <div class="analysis-section">
+          <div class="analysis-section-title">PASS 分析 (${a.skipRounds}局)</div>
+          <div class="analysis-row">
+            <span class="analysis-label">老板全胜(0员工胜)</span>
+            <span class="analysis-value">${a.passBossAllWin}</span>
+            <span class="analysis-pct">${pct(a.passBossAllWin, a.skipRounds)}</span>
+          </div>
+          <div class="analysis-row">
+            <span class="analysis-label">1位员工胜</span>
+            <span class="analysis-value">${a.pass1EmpWin}</span>
+            <span class="analysis-pct">${pct(a.pass1EmpWin, a.skipRounds)}</span>
+          </div>
+          <div class="analysis-row">
+            <span class="analysis-label">2位员工胜</span>
+            <span class="analysis-value">${a.pass2EmpWin}</span>
+            <span class="analysis-pct">${pct(a.pass2EmpWin, a.skipRounds)}</span>
+          </div>
+          <div class="analysis-row">
+            <span class="analysis-label">3位员工全胜</span>
+            <span class="analysis-value">${a.pass3EmpWin}</span>
+            <span class="analysis-pct">${pct(a.pass3EmpWin, a.skipRounds)}</span>
+          </div>
+          <div class="analysis-row">
+            <span class="analysis-label">员工出10点(2x+)</span>
+            <span class="analysis-value">${a.passEmp10pts}</span>
+            <span class="analysis-pct">${a.skipRounds > 0 ? pct(a.passEmp10pts, a.skipRounds * 3) : '-'}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Init
+    // ═══════════════════════════════════════════════════════
+
+    showScreen('start-screen');
+  </script>
+</body>
+</html>
