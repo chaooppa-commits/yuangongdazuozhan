@@ -282,12 +282,13 @@
       html += `<div class="action-stats-grid">`;
       for (const tag of ['理性', '冒进', '保守']) {
         const s = actionStats[tag];
-        const pct = s.count > 0 ? (s.win / s.count * 100).toFixed(0) + '%' : '-';
+        const betPct = s.betCount > 0 ? (s.betWin / s.betCount * 100).toFixed(0) + '%' : '-';
+        const passPct = s.passCount > 0 ? (s.passWin / s.passCount * 100).toFixed(0) + '%' : '-';
         const tagCls = tag === '理性' ? 'tag-rational' : tag === '冒进' ? 'tag-aggressive' : 'tag-conservative';
         html += `<div class="action-stats-item">`;
         html += `<span class="action-tag ${tagCls}">${tag}</span>`;
         html += `<span class="action-stats-count">${s.count}局</span>`;
-        html += `<span class="action-stats-pct">${pct}</span>`;
+        html += `<span class="action-stats-pct">IN ${betPct} | PASS ${passPct}</span>`;
         html += `</div>`;
       }
       html += `</div>`;
@@ -483,12 +484,14 @@
       summaryHtml += '<div class="action-summary-grid">';
       for (const tag of ['理性', '冒进', '保守']) {
         const s = actionStats[tag];
-        const pct = s.count > 0 ? (s.win / s.count * 100).toFixed(0) + '%' : '-';
+        const betPct = s.betCount > 0 ? (s.betWin / s.betCount * 100).toFixed(0) + '%' : '-';
+        const passPct = s.passCount > 0 ? (s.passWin / s.passCount * 100).toFixed(0) + '%' : '-';
         const tagCls = tag === '理性' ? 'tag-rational' : tag === '冒进' ? 'tag-aggressive' : 'tag-conservative';
         summaryHtml += `<div class="action-summary-item">`;
         summaryHtml += `<span class="action-tag ${tagCls}">${tag}</span>`;
         summaryHtml += `<span class="action-summary-count">${s.count}局</span>`;
-        summaryHtml += `<span class="action-summary-pct">准确率 ${pct}</span>`;
+        summaryHtml += `<span class="action-summary-pct">IN ${betPct}</span>`;
+        summaryHtml += `<span class="action-summary-pct">PASS ${passPct}</span>`;
         summaryHtml += `</div>`;
       }
       summaryHtml += '</div>';
