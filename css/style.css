@@ -755,6 +755,97 @@ html, body {
   }
 }
 
+/* ═══════ Action Evaluation Tags ═══════ */
+.action-eval-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: rgba(255,255,255,0.03);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.action-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.action-tag.tag-rational {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--green);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.action-tag.tag-aggressive {
+  background: rgba(244, 63, 94, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+}
+
+.action-tag.tag-conservative {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--gold);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.action-reason {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  flex: 1;
+}
+
+/* ═══════ Action Stats ═══════ */
+.action-stats {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: var(--bg2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.action-stats-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.action-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.action-stats-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 10px;
+}
+
+.action-stats-count {
+  font-size: 0.8rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.action-stats-pct {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
 /* ═══════ Analysis Modal ═══════ */
 .modal-overlay {
   display: none;
