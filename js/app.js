@@ -488,12 +488,13 @@ function getActionStats() {
   };
 
   for (const r of roundLogs) {
-    if (!r.actionEval) continue;
+    if (!r.actionEval) { console.warn('[actionStats] no actionEval', r); continue; }
     const tag = r.actionEval.tag;
-    if (!stats[tag]) continue;
+    if (!stats[tag]) { console.warn('[actionStats] unknown tag', tag); continue; }
     stats[tag].count++;
-    if (r.betTarget === 'SKIP') {
-      // PASS局：老板赢得多（员工赢<=1方）= 准确
+    const isSkip = r.betTarget === 'SKIP';
+    console.log(`[actionStats] round=${r.round} tag=${tag} betTarget=${JSON.stringify(r.betTarget)} isSkip=${isSkip} empWinCount=${r.empWinCount} observerPnl=${r.observerPnl}`);
+    if (isSkip) {
       stats[tag].passCount++;
       const empWins = r.empWinCount || 0;
       if (empWins <= 1) {
@@ -501,7 +502,6 @@ function getActionStats() {
         stats[tag].win++;
       }
     } else {
-      // 出手局：自己赢 = 准确
       stats[tag].betCount++;
       if (r.observerPnl > 0) {
         stats[tag].betWin++;
