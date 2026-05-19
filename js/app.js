@@ -481,24 +481,32 @@ function evaluateAction(hands, betTarget, betAmount) {
 
 function getActionStats() {
   const roundLogs = game.log.filter(e => e.type === 'round');
-  const stats = { 理性: { count: 0, win: 0 }, 冒进: { count: 0, win: 0 }, 保守: { count: 0, win: 0 } };
+  const stats = {
+    理性: { count: 0, win: 0, betCount: 0, betWin: 0, passCount: 0, passWin: 0 },
+    冒进: { count: 0, win: 0, betCount: 0, betWin: 0, passCount: 0, passWin: 0 },
+    保守: { count: 0, win: 0, betCount: 0, betWin: 0, passCount: 0, passWin: 0 }
+  };
 
   for (const r of roundLogs) {
     if (!r.actionEval) continue;
     const tag = r.actionEval.tag;
     if (!stats[tag]) continue;
     stats[tag].count++;
-    // 赢了算对：observerPnl > 0（下注赢）或正确跳过（observerPnl === 0 且没有员工赢）
     if (r.betTarget === 'SKIP') {
-      // 保守跳过：如果那局有员工赢，算错；否则算对
-      const anyEmpWin = r.empWinCount > 0;
-      if (tag === '保守' && !anyEmpWin) stats[tag].win++;
-      else if (tag === '理性' && !anyEmpWin) stats[tag].win++;
-      else if (tag === '保守' && anyEmpWin) { /*错*/ }
-      else if (tag === '理性' && anyEmpWin) { /*错*/ }
+      // PASS局：老板赢得多（员工赢<=1方）= 准确
+      stats[tag].passCount++;
+      const empWins = r.empWinCount || 0;
+      if (empWins <= 1) {
+        stats[tag].passWin++;
+        stats[tag].win++;
+      }
     } else {
-      // 下注回合：赢了就算对
-      if (r.observerPnl > 0) stats[tag].win++;
+      // 出手局：自己赢 = 准确
+      stats[tag].betCount++;
+      if (r.observerPnl > 0) {
+        stats[tag].betWin++;
+        stats[tag].win++;
+      }
     }
   }
 
