@@ -10,7 +10,7 @@
 const INITIAL_PURSE = 50;
 const MAX_ROUNDS = 100;
 const PLAYERS = ['Boss', 'A', 'B', 'C'];
-const STAKE_OPTIONS = [2, 4, 8];
+const STAKE_OPTIONS = [4, 8, 12, 16];
 
 // ═══════════════════════════════════════════════════════
 // Game State
@@ -314,55 +314,67 @@ function getVisible(hand) {
 }
 
 /**
- * Corrected tier lookup from 斗口起手卡力修正概率表
- * Key: sorted pair "a,b" → { tier, winRate, correctedRate, avgMult, ev }
+ * 5星战力分级（基于4人局50000局模拟 p_eq 数据）
+ * tier: 5=5星, 4=4星, 3=3星, 2=2星, 1=1星
+ * p_eq: 等效胜率（％），取自 50000局模拟数据
+ * 口评0:
+ *   5星: 1234(18 27 36 45 p_eq≈5353) | 12(12 23 p_eq≈50)
+ *   4星: 127(13 24 78 p_eq≈49) | 235(25 38 58 p_eq≈48) | 631(68 34 14 p_eq≈48)
+ *   3星: 234(26 35 48) | 876(89 79 67) | 554(57 56 47) | 1156(15 11 59 69) — p_eq 45–47
+ *   2星: 4311(49 39 16 17) | 222(22 28 29) — p_eq 43–45
+ *   1星: 3348(33 37 46 88) | 479(44 77 99) | 156(19 66 55) — p_eq <42
  */
 const CORRECTED_TABLE = {
-  '1,1': { tier: 'A', winRate: 39.12, correctedRate: 45.69, avgMult: 1.335, ev: -0.0862 },
-  '1,2': { tier: 'S+', winRate: 47.02, correctedRate: 53.11, avgMult: 1.259, ev: 0.0622 },
-  '1,3': { tier: 'S+', winRate: 44.20, correctedRate: 49.65, avgMult: 1.247, ev: -0.0070 },
-  '1,4': { tier: 'S', winRate: 43.23, correctedRate: 48.34, avgMult: 1.237, ev: -0.0333 },
-  '1,5': { tier: 'A', winRate: 42.15, correctedRate: 46.58, avgMult: 1.210, ev: -0.0685 },
-  '1,6': { tier: 'A', winRate: 40.60, correctedRate: 44.16, avgMult: 1.175, ev: -0.1168 },
-  '1,7': { tier: 'B', winRate: 39.90, correctedRate: 43.06, avgMult: 1.159, ev: -0.1388 },
-  '1,8': { tier: 'S+', winRate: 50.45, correctedRate: 54.90, avgMult: 1.176, ev: 0.0980 },
-  '1,9': { tier: 'C', winRate: 32.57, correctedRate: 37.19, avgMult: 1.283, ev: -0.2562 },
-  '2,2': { tier: 'B', winRate: 38.00, correctedRate: 42.66, avgMult: 1.245, ev: -0.1467 },
-  '2,3': { tier: 'S', winRate: 44.57, correctedRate: 49.25, avgMult: 1.210, ev: -0.0150 },
-  '2,4': { tier: 'S', winRate: 43.90, correctedRate: 48.79, avgMult: 1.223, ev: -0.0243 },
-  '2,5': { tier: 'S', winRate: 44.42, correctedRate: 48.43, avgMult: 1.180, ev: -0.0315 },
-  '2,6': { tier: 'A', winRate: 43.18, correctedRate: 46.61, avgMult: 1.159, ev: -0.0678 },
-  '2,7': { tier: 'S+', winRate: 49.68, correctedRate: 53.96, avgMult: 1.173, ev: 0.0793 },
-  '2,8': { tier: 'B', winRate: 38.35, correctedRate: 42.74, avgMult: 1.229, ev: -0.1452 },
-  '2,9': { tier: 'B', winRate: 38.32, correctedRate: 42.08, avgMult: 1.196, ev: -0.1585 },
-  '3,3': { tier: 'B', winRate: 38.40, correctedRate: 42.50, avgMult: 1.214, ev: -0.1500 },
-  '3,4': { tier: 'A', winRate: 42.73, correctedRate: 46.69, avgMult: 1.185, ev: -0.0663 },
-  '3,5': { tier: 'A', winRate: 43.08, correctedRate: 46.44, avgMult: 1.156, ev: -0.0712 },
-  '3,6': { tier: 'S+', winRate: 48.95, correctedRate: 53.10, avgMult: 1.170, ev: 0.0620 },
-  '3,7': { tier: 'C', winRate: 36.83, correctedRate: 41.30, avgMult: 1.243, ev: -0.1740 },
-  '3,8': { tier: 'S', winRate: 44.77, correctedRate: 48.46, avgMult: 1.165, ev: -0.0307 },
-  '3,9': { tier: 'A', winRate: 40.67, correctedRate: 44.62, avgMult: 1.194, ev: -0.1075 },
-  '4,4': { tier: 'C', winRate: 36.40, correctedRate: 39.52, avgMult: 1.172, ev: -0.2095 },
-  '4,5': { tier: 'S+', winRate: 51.00, correctedRate: 55.24, avgMult: 1.166, ev: 0.1047 },
-  '4,6': { tier: 'C', winRate: 36.58, correctedRate: 41.00, avgMult: 1.242, ev: -0.1800 },
-  '4,7': { tier: 'A', winRate: 42.50, correctedRate: 46.23, avgMult: 1.175, ev: -0.0755 },
-  '4,8': { tier: 'S', winRate: 44.30, correctedRate: 47.98, avgMult: 1.166, ev: -0.0405 },
-  '4,9': { tier: 'B', winRate: 40.05, correctedRate: 43.84, avgMult: 1.189, ev: -0.1232 },
-  '5,5': { tier: 'C', winRate: 24.73, correctedRate: 28.95, avgMult: 1.342, ev: -0.4210 },
-  '5,6': { tier: 'A', winRate: 41.83, correctedRate: 44.77, avgMult: 1.141, ev: -0.1045 },
-  '5,7': { tier: 'A', winRate: 42.93, correctedRate: 46.65, avgMult: 1.174, ev: -0.0670 },
-  '5,8': { tier: 'S', winRate: 44.38, correctedRate: 48.35, avgMult: 1.179, ev: -0.0330 },
-  '5,9': { tier: 'A', winRate: 41.42, correctedRate: 45.20, avgMult: 1.182, ev: -0.0960 },
-  '6,6': { tier: 'C', winRate: 34.20, correctedRate: 37.11, avgMult: 1.170, ev: -0.2577 },
-  '6,7': { tier: 'A', winRate: 42.85, correctedRate: 46.15, avgMult: 1.154, ev: -0.0770 },
-  '6,8': { tier: 'A', winRate: 42.90, correctedRate: 46.39, avgMult: 1.163, ev: -0.0722 },
-  '6,9': { tier: 'A', winRate: 42.00, correctedRate: 46.05, avgMult: 1.193, ev: -0.0790 },
-  '7,7': { tier: 'C', winRate: 35.33, correctedRate: 38.24, avgMult: 1.165, ev: -0.2352 },
-  '7,8': { tier: 'S', winRate: 43.88, correctedRate: 47.61, avgMult: 1.170, ev: -0.0478 },
-  '7,9': { tier: 'S', winRate: 43.50, correctedRate: 47.80, avgMult: 1.198, ev: -0.0440 },
-  '8,8': { tier: 'C', winRate: 37.97, correctedRate: 41.08, avgMult: 1.163, ev: -0.1785 },
-  '8,9': { tier: 'S', winRate: 43.30, correctedRate: 47.44, avgMult: 1.191, ev: -0.0512 },
-  '9,9': { tier: 'C', winRate: 34.62, correctedRate: 37.98, avgMult: 1.194, ev: -0.2405 },
+  // 5星（p_eq >= 50）
+  '1,8': { tier: 5, p_eq: 54.32 },
+  '3,6': { tier: 5, p_eq: 53.45 },
+  '4,5': { tier: 5, p_eq: 53.34 },
+  '2,7': { tier: 5, p_eq: 53.26 },
+  '1,2': { tier: 5, p_eq: 50.98 },
+  '2,3': { tier: 5, p_eq: 49.68 },  // 临界5星，归入12组
+  // 4星（p_eq 47–49.6）
+  '1,3': { tier: 4, p_eq: 49.06 },
+  '2,4': { tier: 4, p_eq: 48.81 },
+  '7,8': { tier: 4, p_eq: 48.66 },
+  '3,8': { tier: 4, p_eq: 48.22 },
+  '2,5': { tier: 4, p_eq: 47.99 },
+  '5,8': { tier: 4, p_eq: 47.89 },
+  '6,8': { tier: 4, p_eq: 47.86 },
+  '3,4': { tier: 4, p_eq: 47.80 },
+  '4,8': { tier: 4, p_eq: 47.31 },
+  // 3星（p_eq 45–47.1）
+  '1,4': { tier: 3, p_eq: 47.08 },
+  '3,5': { tier: 3, p_eq: 47.07 },
+  '2,6': { tier: 3, p_eq: 46.89 },
+  '8,9': { tier: 3, p_eq: 46.86 },
+  '6,7': { tier: 3, p_eq: 46.44 },
+  '5,7': { tier: 3, p_eq: 45.78 },
+  '7,9': { tier: 3, p_eq: 45.73 },
+  '5,6': { tier: 3, p_eq: 45.61 },
+  '4,7': { tier: 3, p_eq: 45.45 },
+  '1,1': { tier: 3, p_eq: 45.37 },
+  '1,5': { tier: 3, p_eq: 45.37 },
+  '5,9': { tier: 3, p_eq: 45.07 },
+  // 2星（p_eq 43–45）
+  '6,9': { tier: 2, p_eq: 44.83 },
+  '4,9': { tier: 2, p_eq: 44.52 },
+  '3,9': { tier: 2, p_eq: 44.00 },
+  '1,6': { tier: 2, p_eq: 43.85 },
+  '1,7': { tier: 2, p_eq: 43.84 },
+  '2,2': { tier: 2, p_eq: 43.77 },
+  '2,9': { tier: 2, p_eq: 43.31 },
+  // 1星（p_eq < 43）
+  '2,8': { tier: 1, p_eq: 42.72 },
+  '3,3': { tier: 1, p_eq: 41.44 },
+  '3,7': { tier: 1, p_eq: 41.37 },
+  '4,6': { tier: 1, p_eq: 41.35 },
+  '8,8': { tier: 1, p_eq: 39.78 },
+  '4,4': { tier: 1, p_eq: 38.54 },
+  '7,7': { tier: 1, p_eq: 38.24 },
+  '9,9': { tier: 1, p_eq: 37.50 },
+  '1,9': { tier: 1, p_eq: 36.99 },
+  '6,6': { tier: 1, p_eq: 36.20 },
+  '5,5': { tier: 1, p_eq: 30.76 },
 };
 
 /**
@@ -378,7 +390,13 @@ function lookupTier(a, b) {
 // Action Evaluation (出手规范分析)
 // ═══════════════════════════════════════════════════════
 
-const TIER_VALUE = { 'S+': 5, 'S': 4, 'A': 3, 'B': 2, 'C': 1 };
+// 星级标签文本
+const TIER_LABEL = { 5: '5星', 4: '4星', 3: '3星', 2: '2星', 1: '1星' };
+
+// 推荐注码：2档差┩4, 3档差┩8, 4档差┩12, 4档差特殊┩16
+const STAKE_FOR_GAP = { 2: 4, 3: 8, 4: 12 };
+
+function tierLabel(t) { return TIER_LABEL[t] || `${t}星`; }
 
 function getPlayerPower(hand) {
   const v = [hand[0], hand[1]];
@@ -393,8 +411,8 @@ function evaluateAction(hands, betTarget, betAmount) {
     C: getPlayerPower(hands[3])
   };
 
-  const bossRate = bossInfo ? bossInfo.correctedRate : 40;
-  const bossTierVal = bossInfo ? (TIER_VALUE[bossInfo.tier] || 3) : 3;
+  const bossTier = bossInfo ? bossInfo.tier : 3;
+  const bossRate = bossInfo ? bossInfo.p_eq : 45;
 
   // 计算每个员工vs老板的战力差
   const gaps = {};
@@ -402,17 +420,17 @@ function evaluateAction(hands, betTarget, betAmount) {
     const info = empInfos[lbl];
     if (info) {
       gaps[lbl] = {
-        rateDiff: info.correctedRate - bossRate,
-        tierDiff: (TIER_VALUE[info.tier] || 3) - bossTierVal,
+        rateDiff: info.p_eq - bossRate,
+        tierDiff: info.tier - bossTier,
         tier: info.tier,
-        rate: info.correctedRate
+        rate: info.p_eq
       };
     } else {
-      gaps[lbl] = { rateDiff: 0, tierDiff: 0, tier: '-', rate: 0 };
+      gaps[lbl] = { rateDiff: 0, tierDiff: 0, tier: 3, rate: 45 };
     }
   }
 
-  // 找最佳员工
+  // 找最佳员工（最高等效胜率）
   let bestLbl = null;
   let bestGap = -999;
   for (const lbl of ['A', 'B', 'C']) {
@@ -420,63 +438,51 @@ function evaluateAction(hands, betTarget, betAmount) {
     if (g > bestGap) { bestGap = g; bestLbl = lbl; }
   }
 
-  // 判断是否存在"明显机会"
-  const hasClearOpportunity = ['A','B','C'].some(lbl => {
-    const g = gaps[lbl];
-    return g.rateDiff >= 5 && g.tierDiff >= 1;
-  });
+  // 如果下注，用选中员工；如果 SKIP，用最佳员工作参考
+  const evalLbl = (betTarget === 'SKIP') ? (bestLbl || 'A') : betTarget;
+  const sel = gaps[evalLbl];
 
-  // 判断是否存在"明显优势机会"
-  const hasStrongOpportunity = ['A','B','C'].some(lbl => {
-    const g = gaps[lbl];
-    return g.rateDiff >= 8 || g.tierDiff >= 2;
-  });
+  // 构建显示字符串: "X星-Y星=Z档；M%-N%=±D%；投N或pass"
+  function buildDetail(empTier, empRate, bossTierV, bossRateV, gapDiff, rateDiff, stakeStr) {
+    const gap = gapDiff >= 0 ? gapDiff : 0;
+    const rateD = (rateDiff >= 0 ? '+' : '') + rateDiff.toFixed(0) + '%';
+    // 格式: "5-2=3星；50%-40%=+10%；挂5或pass"
+    return `${empTier}-${bossTierV}=${gap}星；${empRate.toFixed(0)}%-${bossRateV.toFixed(0)}%=${rateD}；${stakeStr}`;
+  }
 
-  // 老板是否是明显弱势
-  const bossIsWeak = bossInfo && (bossInfo.tier === 'C' || bossInfo.correctedRate <= 37);
-
-  // ─── 用户选择SKIP ───
+  // ——— SKIP ———
   if (betTarget === 'SKIP') {
-    if (hasClearOpportunity || bossIsWeak) {
-      return { tag: '保守', reason: '明显优势机会却选择观望' };
-    }
-    return { tag: '理性', reason: '无明显战力优势，跳过合理' };
+    // 以最佳员工作为参考评估
+    const stakeStr = 'pass';
+    const d = buildDetail(sel.tier, sel.rate, bossTier, bossRate, sel.tierDiff, sel.rateDiff, stakeStr);
+    // 等级差 < 2：pass 理性；等级差 >= 2：pass 保守（放弃了好机会）
+    const tag = sel.tierDiff >= 2 ? '保守' : '理性';
+    return { tag, detail: d };
   }
 
-  // ─── 用户下注 ───
-  const sel = gaps[betTarget];
+  // ——— 下注 ———
+  // 推荐注码：gap=2→4, gap=3→8, gap=4→12, gap>=5→16, gap<=1→4
+  const recStake = STAKE_FOR_GAP[sel.tierDiff] || (sel.tierDiff >= 4 ? 12 : 4);
+  const stakeStr = `投${betAmount}`;
+  const d = buildDetail(sel.tier, sel.rate, bossTier, bossRate, sel.tierDiff, sel.rateDiff, stakeStr);
 
-  // 冒进：选中员工没有明显优势
-  if (sel.rateDiff < 3 || sel.tierDiff <= 0) {
-    if (betAmount >= 8) {
-      return { tag: '冒进', reason: '战力不占优却重注出击' };
-    }
-    return { tag: '冒进', reason: '选中员工战力不优于老板' };
-  }
-
-  // 冒进：明明有更好选择却选了弱的
-  if (bestLbl && bestLbl !== betTarget && gaps[bestLbl].rateDiff - sel.rateDiff >= 5) {
-    return { tag: '冒进', reason: '有更强员工未选，选择欠妥' };
+  // 冒进：战力不占优（tier差<=0）还投注
+  if (sel.tierDiff <= 0) {
+    return { tag: '冒进', detail: d };
   }
 
-  // 保守：明显优势却出手太轻
-  if (hasStrongOpportunity && betAmount <= 4) {
-    return { tag: '保守', reason: '明显优势下出手太轻' };
+  // 注码与战力差的匹配判断
+  if (betAmount > recStake) {
+    // 小差投大注 → 冒进
+    return { tag: '冒进', detail: d };
+  }
+  if (betAmount < recStake) {
+    // 大差投小注 → 保守
+    return { tag: '保守', detail: d };
   }
 
-  // 保守：选了正确员工但注码偏小
-  if (sel.rateDiff >= 8 && betAmount <= 4) {
-    return { tag: '保守', reason: '战力差显著，该重注' };
-  }
-
-  // 理性
-  if (sel.rateDiff >= 5 && sel.tierDiff >= 1) {
-    return { tag: '理性', reason: '战力差明显，出手合理' };
-  }
-  if (bossIsWeak && sel.rateDiff >= 0) {
-    return { tag: '理性', reason: '老板弱势，出击合理' };
-  }
-  return { tag: '理性', reason: '出手符合规范' };
+  // 投注匹配战力差 → 理性
+  return { tag: '理性', detail: d };
 }
 
 function getActionStats() {
