@@ -59,8 +59,11 @@
     </div>
 
     <!-- PnL chart -->
-    <div class="pnl-chart">
-      <canvas id="pnl-canvas"></canvas>
+    <div class="pnl-chart-row">
+      <div class="pnl-chart">
+        <canvas id="pnl-canvas"></canvas>
+      </div>
+      <button class="tier-table-btn" onclick="showTierTable()" title="战力表">⚡表</button>
     </div>
 
     <!-- Card table -->
@@ -106,6 +109,17 @@
       <div class="modal-body" id="analysis-body">
         <!-- Rendered dynamically -->
       </div>
+    </div>
+  </div>
+
+  <!-- ═══════ Tier Table Modal ═══════ -->
+  <div class="modal-overlay" id="tier-table-modal" onclick="closeTierTable(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>战力表（p_eq等效胜率）</h3>
+        <button class="modal-close" onclick="closeTierTable()">&times;</button>
+      </div>
+      <div class="modal-body" id="tier-table-body"></div>
     </div>
   </div>
 
@@ -229,11 +243,13 @@
         html += `</div>`;
 
         if (showTier && tierInfo) {
-          html += `<span class="tier-badge tier-${tier}">${tier}</span>`;
-          html += `<div class="blessing-hint">${tierInfo.correctedRate.toFixed(0)}% ${tierInfo.ev >= 0 ? '+' : ''}${tierInfo.ev.toFixed(3)}</div>`;
+          const starLbl = tierInfo.tier + '星';
+          html += `<span class="tier-badge tier-${tierInfo.tier}">${starLbl}</span>`;
+          html += `<div class="blessing-hint">${tierInfo.p_eq.toFixed(0)}%</div>`;
         } else if (isBetting && isSelected && tierInfo) {
-          html += `<span class="tier-badge tier-${tier}">${tier}</span>`;
-          html += `<div class="blessing-hint">${tierInfo.correctedRate.toFixed(0)}% ${tierInfo.ev >= 0 ? '+' : ''}${tierInfo.ev.toFixed(3)}</div>`;
+          const starLbl = tierInfo.tier + '星';
+          html += `<span class="tier-badge tier-${tierInfo.tier}">${starLbl}</span>`;
+          html += `<div class="blessing-hint">${tierInfo.p_eq.toFixed(0)}%</div>`;
         } else {
           html += `<div class="blessing-hint">${blessingStr || '-'}</div>`;
         }
@@ -271,7 +287,7 @@
         const tagClass = actionEval.tag === '理性' ? 'tag-rational' : actionEval.tag === '冒进' ? 'tag-aggressive' : 'tag-conservative';
         html += `<div class="action-eval-row">`;
         html += `<span class="action-tag ${tagClass}">${actionEval.tag}</span>`;
-        html += `<span class="action-reason">${actionEval.reason}</span>`;
+        html += `<span class="action-reason">${actionEval.detail || ''}</span>`;
         html += `</div>`;
       }
 
@@ -300,7 +316,7 @@
         const struct = explainHand(game.hands[i]);
         const v = [game.hands[i][0], game.hands[i][1]];
         const ti = lookupTier(v[0], v[1]);
-        const tierStr = ti ? `<span class="tier-badge tier-${ti.tier}" style="font-size:0.65rem;padding:1px 4px">${ti.tier}</span> <span style="font-size:0.6rem;color:var(--text-dim)">${ti.correctedRate.toFixed(0)}%</span>` : '';
+        const tierStr = ti ? `<span class="tier-badge tier-${ti.tier}" style="font-size:0.65rem;padding:1px 4px">${ti.tier}星</span> <span style="font-size:0.6rem;color:var(--text-dim)">${ti.p_eq.toFixed(0)}%</span>` : '';
         html += `<div class="structure-item">`;
         html += `<div class="struct-label">${labels[i]} ${tierStr}</div>`;
         html += `<div class="struct-text">${struct}</div>`;
@@ -391,7 +407,11 @@
         const validStakes = STAKE_OPTIONS.filter(s => s <= game.obsPurse && s <= game.bossPurse);
         html += `<span class="stake-picker-label">押${target}</span>`;
         for (const s of validStakes) {
-          html += `<button class="bet-btn btn-stake-opt" onclick="onBetAndReset('${target}',${s})">$${s}</button>`;
+          if (s === 16) {
+            html += `<button class="bet-btn btn-stake-opt btn-stake-max" onclick="confirmStake16('${target}')">$${s}</button>`;
+          } else {
+            html += `<button class="bet-btn btn-stake-opt" onclick="onBetAndReset('${target}',${s})">$${s}</button>`;
+          }
         }
       }
 
@@ -402,6 +422,13 @@
     function onBetAndReset(target, amount) {
       manualTarget = null;
       onBet(target, amount);
+    }
+
+    function confirmStake16(target) {
+      if (confirm('投注 $16 — 确认大注？')) {
+        manualTarget = null;
+        onBet(target, 16);
+      }
     }
 
     // ═══════════════════════════════════════════════════════
@@ -569,6 +596,65 @@
     function closeAnalysis(e) {
       if (e && e.target !== e.currentTarget) return;
       document.getElementById('analysis-modal').classList.remove('show');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Tier Table Modal
+    // ═══════════════════════════════════════════════════════
+
+    const TIER_GROUPS = [
+      { star: 5, label: '5星', groups: [
+        { mnemonic: '1234', hands: [[1,8],[2,7],[3,6],[4,5]] },
+        { mnemonic: '12',   hands: [[1,2],[2,3]] },
+      ]},
+      { star: 4, label: '4星', groups: [
+        { mnemonic: '127', hands: [[1,3],[2,4],[7,8]] },
+        { mnemonic: '235', hands: [[2,5],[3,8],[5,8]] },
+        { mnemonic: '631', hands: [[6,8],[3,4],[1,4]] },
+      ]},
+      { star: 3, label: '3星', groups: [
+        { mnemonic: '234',  hands: [[2,6],[3,5],[4,8]] },
+        { mnemonic: '876',  hands: [[8,9],[7,9],[6,7]] },
+        { mnemonic: '554',  hands: [[5,7],[5,6],[4,7]] },
+        { mnemonic: '1156', hands: [[1,5],[1,1],[5,9],[6,9]] },
+      ]},
+      { star: 2, label: '2星', groups: [
+        { mnemonic: '4311', hands: [[4,9],[3,9],[1,6],[1,7]] },
+        { mnemonic: '222',  hands: [[2,2],[2,8],[2,9]] },
+      ]},
+      { star: 1, label: '1星', groups: [
+        { mnemonic: '3348', hands: [[3,3],[3,7],[4,6],[8,8]] },
+        { mnemonic: '479',  hands: [[4,4],[7,7],[9,9]] },
+        { mnemonic: '156',  hands: [[1,9],[6,6],[5,5]] },
+      ]},
+    ];
+
+    function showTierTable() {
+      const body = document.getElementById('tier-table-body');
+      let html = '';
+      for (const tier of TIER_GROUPS) {
+        html += `<div class="tier-group">`;
+        html += `<div class="tier-group-title"><span class="tier-badge tier-${tier.star}">${tier.label}</span></div>`;
+        for (const g of tier.groups) {
+          html += `<div class="tier-group-row">`;
+          html += `<span class="tier-mnemonic">${g.mnemonic}</span>`;
+          for (const [a, b] of g.hands) {
+            const key = [Math.min(a,b), Math.max(a,b)].join(',');
+            const info = CORRECTED_TABLE[key];
+            const pct = info ? info.p_eq.toFixed(0) + '%' : '-';
+            html += `<span class="tier-hand-item">(${a},${b}) <em>${pct}</em></span>`;
+          }
+          html += `</div>`;
+        }
+        html += `</div>`;
+      }
+      body.innerHTML = html;
+      document.getElementById('tier-table-modal').classList.add('show');
+    }
+
+    function closeTierTable(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById('tier-table-modal').classList.remove('show');
     }
 
     function pct(n, d) {
