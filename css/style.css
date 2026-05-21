@@ -331,9 +331,20 @@ html, body {
   color: var(--text-dim);
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  white-space: normal;
+  line-height: 1.3;
+}
+
+.tier-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.tier-info-col .blessing-hint {
+  flex: unset;
+  min-width: unset;
 }
 
 .mn-tag {
