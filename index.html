@@ -132,12 +132,50 @@
 
     let selectedMode = 'manual';
 
-    function vib(ms) {
-      if (navigator.vibrate) navigator.vibrate(ms || 10);
+    // ═══════════════════════════════════════════════════════
+    // Haptic + Audio Feedback (iOS-safe)
+    // ═══════════════════════════════════════════════════════
+    let _audioCtx = null;
+    let _clickBuf = null;
+
+    function tap() {
+      // Vibrate (Android only, iOS ignores)
+      if (navigator.vibrate) navigator.vibrate(10);
+      // Play click sound via AudioContext (iOS-safe, lowest latency)
+      if (_audioCtx && _clickBuf) {
+        try {
+          const src = _audioCtx.createBufferSource();
+          src.buffer = _clickBuf;
+          src.connect(_audioCtx.destination);
+          src.start(0);
+        } catch(e) {}
+      }
     }
 
+    // Init audio on first user gesture (iOS requires user gesture to unlock)
+    function initAudio() {
+      if (_audioCtx) return;
+      try {
+        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        fetch('yinxiao/dianji.wav')
+          .then(r => r.arrayBuffer())
+          .then(buf => _audioCtx.decodeAudioData(buf))
+          .then(decoded => { _clickBuf = decoded; })
+          .catch(() => {});
+      } catch(e) {}
+    }
+
+    // Unlock AudioContext on first tap (iOS Safari requirement)
+    document.addEventListener('click', function unlockAudio() {
+      initAudio();
+      if (_audioCtx && _audioCtx.state === 'suspended') {
+        _audioCtx.resume();
+      }
+      document.removeEventListener('click', unlockAudio);
+    }, { once: true });
+
     function selectMode(mode) {
-      vib();
+      tap();
       selectedMode = mode;
       document.querySelectorAll('.mode-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.mode === mode);
@@ -145,7 +183,7 @@
     }
 
     function onStart() {
-      vib();
+      tap();
       const seedStr = document.getElementById('seed-input').value.trim();
       startGame(selectedMode === 'kelly', seedStr);
     }
@@ -387,7 +425,7 @@
     }
 
     function confirmRun() {
-      vib();
+      tap();
       if (confirm('确认退场？')) {
         onBet('RUN', 0);
       }
@@ -401,7 +439,7 @@
 
     function selectEmployee(target) {
       if (game.phase !== 'betting') return;
-      vib();
+      tap();
       // Toggle: clicking same employee deselects
       if (manualTarget === target) {
         manualTarget = null;
@@ -436,13 +474,13 @@
     }
 
     function onBetAndReset(target, amount) {
-      vib();
+      tap();
       manualTarget = null;
       onBet(target, amount);
     }
 
     function confirmStake16(target) {
-      vib();
+      tap();
       if (confirm('投注 $16 — 确认大注？')) {
         manualTarget = null;
         onBet(target, 16);
@@ -454,7 +492,7 @@
     // ═══════════════════════════════════════════════════════
 
     function onBet(target, amount) {
-      vib();
+      tap();
       placeBet(target, amount);
     }
 
