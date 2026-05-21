@@ -13,18 +13,18 @@
   <!-- ═══════ Start Screen ═══════ -->
   <div id="start-screen">
     <h1>牛马大作战</h1>
-    <p class="subtitle">狙击手在行动</p>
+    <p class="subtitle">牛马的皮鞭准备好了吗？</p>
 
     <div class="config-group">
-      <label>策略模式</label>
+      <label>你要如何伺候老板？</label>
       <div class="mode-toggle">
         <button class="mode-btn active" data-mode="manual" onclick="selectMode('manual')">
-          手动
+          亲手服侍
           <div class="mode-desc">4/8/12/16</div>
         </button>
         <button class="mode-btn" data-mode="kelly" onclick="selectMode('kelly')">
-          Kelly
-          <div class="mode-desc">半Kelly 20%</div>
+          懒得动手
+          <div class="mode-desc">1/2 Kelly</div>
         </button>
       </div>
     </div>
@@ -34,7 +34,7 @@
       <input type="text" class="seed-input" id="seed-input" placeholder="输入数字或留空">
     </div>
 
-    <button class="start-btn" onclick="onStart()">开始对决</button>
+    <button class="start-btn" onclick="onStart()">老板快过来</button>
   </div>
 
   <!-- ═══════ Game Screen ═══════ -->
@@ -82,6 +82,9 @@
       <!-- Rendered dynamically -->
     </div>
   </div>
+
+  <!-- Review overlay -->
+  <div class="review-overlay" id="review-overlay"></div>
 
   <!-- ═══════ End Screen ═══════ -->
   <div id="end-screen">
@@ -187,7 +190,7 @@
       tap();
       _prevRoundData = null;
       _lastRoundData = null;
-      _reviewMode = false;
+      document.getElementById('review-overlay').classList.remove('show');
       const seedStr = document.getElementById('seed-input').value.trim();
       startGame(selectedMode === 'kelly', seedStr);
     }
@@ -225,28 +228,57 @@
     // ═══════════════════════════════════════════════════════
     let _prevRoundData = null; // previous round for review
     let _lastRoundData = null; // { hands, settlement, actionEval }
-    let _reviewMode = false;
 
-    function reviewLastRound() {
+    function showReview() {
       tap();
       if (!_prevRoundData) return;
-      _reviewMode = true;
-      // Temporarily swap game.hands to render prev round's cards
-      const savedHands = game.hands;
-      const savedPhase = game.phase;
-      game.hands = _prevRoundData.hands;
-      game.phase = 'result';
-      renderCardTable(_prevRoundData.settlement);
-      renderResult(_prevRoundData.settlement, _prevRoundData.actionEval);
-      game.hands = savedHands;
-      game.phase = savedPhase;
-      renderActionBar();
+      const d = _prevRoundData;
+      const s = d.settlement;
+      const labels = ['Boss', 'A', 'B', 'C'];
+
+      let html = '<div class="review-sheet">';
+      html += '<div class="review-header"><span>回看上一局</span><button onclick="closeReview()">✕</button></div>';
+
+      // Card rows
+      for (let i = 0; i < 4; i++) {
+        const hand = d.hands[i];
+        const isEmp = i >= 1;
+        const lbl = labels[i];
+        let cls = 'review-row';
+        if (isEmp) {
+          const er = s.employeeResults[lbl];
+          if (er) cls += er.won ? ' rw' : ' rl';
+        }
+        html += `<div class="${cls}">`;
+        html += `<span class="review-lbl">${lbl}</span>`;
+        html += '<span class="review-cards">';
+        for (let j = 0; j < 5; j++) html += `<span class="rc">${hand[j]}</span>`;
+        html += '</span>';
+        if (isEmp) {
+          const er = s.employeeResults[lbl];
+          if (er) {
+            const mark = er.won ? '胜' : '负';
+            const mult = er.won && er.mult > 1 ? ` ×${er.mult}` : '';
+            html += `<span class="review-result ${er.won ? 'rw' : 'rl'}">${mark}${mult}</span>`;
+          }
+        } else {
+          html += `<span class="review-result ${s.observerPnl < 0 ? 'rw' : 'rl'}">${s.observerPnl < 0 ? '吃' : '亏'}</span>`;
+        }
+        html += '</div>';
+      }
+
+      // PnL
+      const pnl = s.observerPnl;
+      html += `<div class="review-pnl ${pnl > 0 ? 'rw' : 'rl'}">${pnl > 0 ? '+' : ''}${pnl}</div>`;
+      html += '</div>';
+
+      document.getElementById('review-overlay').innerHTML = html;
+      document.getElementById('review-overlay').classList.add('show');
     }
 
     function closeReview() {
       tap();
-      _reviewMode = false;
-      renderGameScreen(game._lastSettlement, game._lastActionEval);
+      document.getElementById('review-overlay').classList.remove('show');
     }
 
     function goNextRound() {
@@ -464,7 +496,7 @@
 
       if (game.phase === 'betting') {
         const reviewBtn = _prevRoundData
-          ? `<button class="bet-btn btn-pass" onclick="${_reviewMode ? 'closeReview()' : 'reviewLastRound()'}">${_reviewMode ? '收起' : '回看'}</button>`
+          ? '<button class="bet-btn btn-pass" onclick="showReview()">回看</button>'
           : '';
         bar.innerHTML = `
           <div class="action-row-single">
