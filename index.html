@@ -244,12 +244,16 @@
 
         if (showTier && tierInfo) {
           const starLbl = tierInfo.tier + '星';
+          html += `<div class="tier-info-col">`;
           html += `<span class="tier-badge tier-${tierInfo.tier}">${starLbl}</span>`;
           html += `<div class="blessing-hint"><span class="mn-tag">${tierInfo.mn}</span> ${tierInfo.mp}%</div>`;
+          html += `</div>`;
         } else if (isBetting && isSelected && tierInfo) {
           const starLbl = tierInfo.tier + '星';
+          html += `<div class="tier-info-col">`;
           html += `<span class="tier-badge tier-${tierInfo.tier}">${starLbl}</span>`;
           html += `<div class="blessing-hint"><span class="mn-tag">${tierInfo.mn}</span> ${tierInfo.mp}%</div>`;
+          html += `</div>`;
         } else {
           html += `<div class="blessing-hint">${blessingStr || '-'}</div>`;
         }
