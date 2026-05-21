@@ -246,13 +246,13 @@
           const starLbl = tierInfo.tier + '星';
           html += `<div class="tier-info-col">`;
           html += `<span class="tier-badge tier-${tierInfo.tier}">${starLbl}</span>`;
-          html += `<div class="blessing-hint"><span class="mn-tag">${tierInfo.mn}</span> ${tierInfo.mp}%</div>`;
+          html += `<div class="blessing-hint"><span class="mn-tag">${tierInfo.mn}</span> <span class="mp-tag">${tierInfo.mp}%</span></div>`;
           html += `</div>`;
         } else if (isBetting && isSelected && tierInfo) {
           const starLbl = tierInfo.tier + '星';
           html += `<div class="tier-info-col">`;
           html += `<span class="tier-badge tier-${tierInfo.tier}">${starLbl}</span>`;
-          html += `<div class="blessing-hint"><span class="mn-tag">${tierInfo.mn}</span> ${tierInfo.mp}%</div>`;
+          html += `<div class="blessing-hint"><span class="mn-tag">${tierInfo.mn}</span> <span class="mp-tag">${tierInfo.mp}%</span></div>`;
           html += `</div>`;
         } else {
           html += `<div class="blessing-hint">${blessingStr || '-'}</div>`;
@@ -320,7 +320,7 @@
         const struct = explainHand(game.hands[i]);
         const v = [game.hands[i][0], game.hands[i][1]];
         const ti = lookupTier(v[0], v[1]);
-        const tierStr = ti ? `<span class="tier-badge tier-${ti.tier}" style="font-size:0.65rem;padding:1px 4px">${ti.tier}星</span> <span class="mn-tag">${ti.mn}</span> <span style="font-size:0.6rem;color:var(--text-dim)">${ti.mp}%</span>` : '';
+        const tierStr = ti ? `<span class="tier-badge tier-${ti.tier}" style="font-size:0.65rem;padding:1px 4px">${ti.tier}星</span> <span class="mn-tag">${ti.mn}</span> <span class="mp-tag">${ti.mp}%</span>` : '';
         html += `<div class="structure-item">`;
         html += `<div class="struct-label">${labels[i]} ${tierStr}</div>`;
         html += `<div class="struct-text">${struct}</div>`;
