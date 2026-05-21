@@ -132,7 +132,12 @@
 
     let selectedMode = 'manual';
 
+    function vib(ms) {
+      if (navigator.vibrate) navigator.vibrate(ms || 10);
+    }
+
     function selectMode(mode) {
+      vib();
       selectedMode = mode;
       document.querySelectorAll('.mode-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.mode === mode);
@@ -140,6 +145,7 @@
     }
 
     function onStart() {
+      vib();
       const seedStr = document.getElementById('seed-input').value.trim();
       startGame(selectedMode === 'kelly', seedStr);
     }
@@ -222,6 +228,10 @@
         if (i === 0) rowClass += ' boss-row';
         if (isSelected) rowClass += ' selected-emp';
         if (clickable) rowClass += ' clickable-emp';
+        if (showTier && isEmp && settlement) {
+          const er = settlement.employeeResults[empLabel];
+          if (er) rowClass += er.won ? ' result-win' : ' result-lose';
+        }
 
         const clickAttr = clickable ? ` onclick="selectEmployee('${empLabel}')"` : '';
 
@@ -377,6 +387,7 @@
     }
 
     function confirmRun() {
+      vib();
       if (confirm('确认退场？')) {
         onBet('RUN', 0);
       }
@@ -390,6 +401,7 @@
 
     function selectEmployee(target) {
       if (game.phase !== 'betting') return;
+      vib();
       // Toggle: clicking same employee deselects
       if (manualTarget === target) {
         manualTarget = null;
@@ -424,11 +436,13 @@
     }
 
     function onBetAndReset(target, amount) {
+      vib();
       manualTarget = null;
       onBet(target, amount);
     }
 
     function confirmStake16(target) {
+      vib();
       if (confirm('投注 $16 — 确认大注？')) {
         manualTarget = null;
         onBet(target, 16);
@@ -440,6 +454,7 @@
     // ═══════════════════════════════════════════════════════
 
     function onBet(target, amount) {
+      vib();
       placeBet(target, amount);
     }
 
