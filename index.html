@@ -5,22 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>斗老板</title>
+  <title>牛马大作战</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
   <!-- ═══════ Start Screen ═══════ -->
   <div id="start-screen">
-    <h1>斗老板</h1>
-    <p class="subtitle">观察者视角模拟器</p>
+    <h1>牛马大作战</h1>
+    <p class="subtitle">狙击手在行动</p>
 
     <div class="config-group">
       <label>策略模式</label>
       <div class="mode-toggle">
         <button class="mode-btn active" data-mode="manual" onclick="selectMode('manual')">
           手动
-          <div class="mode-desc">2/4/8 自选</div>
+          <div class="mode-desc">4/8/12/16</div>
         </button>
         <button class="mode-btn" data-mode="kelly" onclick="selectMode('kelly')">
           Kelly
@@ -46,7 +46,7 @@
       </div>
       <div class="purse-display">
         <div class="purse-item">
-          <div class="purse-label">观察者</div>
+          <div class="purse-label">狙击手</div>
           <div class="purse-value obs" id="obs-purse">$50</div>
           <div class="purse-bar"><div class="purse-bar-fill obs" id="obs-bar" style="width:50%"></div></div>
         </div>
@@ -64,6 +64,7 @@
         <canvas id="pnl-canvas"></canvas>
       </div>
       <button class="tier-table-btn" onclick="showTierTable()" title="战力表">⚡表</button>
+      <button class="tier-table-btn" onclick="toggleTheme()" id="theme-btn" title="切换主题">🌙</button>
     </div>
 
     <!-- Card table -->
@@ -184,6 +185,9 @@
 
     function onStart() {
       tap();
+      _prevRoundData = null;
+      _lastRoundData = null;
+      _reviewMode = false;
       const seedStr = document.getElementById('seed-input').value.trim();
       startGame(selectedMode === 'kelly', seedStr);
     }
@@ -205,11 +209,65 @@
     }
 
     // ═══════════════════════════════════════════════════════
+    // Theme Toggle
+    // ═══════════════════════════════════════════════════════
+    let _isDark = true;
+
+    function toggleTheme() {
+      tap();
+      _isDark = !_isDark;
+      document.documentElement.setAttribute('data-theme', _isDark ? 'dark' : 'light');
+      document.getElementById('theme-btn').textContent = _isDark ? '🌙' : '☀️';
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Last Round Review
+    // ═══════════════════════════════════════════════════════
+    let _prevRoundData = null; // previous round for review
+    let _lastRoundData = null; // { hands, settlement, actionEval }
+    let _reviewMode = false;
+
+    function reviewLastRound() {
+      tap();
+      if (!_prevRoundData) return;
+      _reviewMode = true;
+      // Temporarily swap game.hands to render prev round's cards
+      const savedHands = game.hands;
+      const savedPhase = game.phase;
+      game.hands = _prevRoundData.hands;
+      game.phase = 'result';
+      renderCardTable(_prevRoundData.settlement);
+      renderResult(_prevRoundData.settlement, _prevRoundData.actionEval);
+      game.hands = savedHands;
+      game.phase = savedPhase;
+      renderActionBar();
+    }
+
+    function closeReview() {
+      tap();
+      _reviewMode = false;
+      renderGameScreen(game._lastSettlement, game._lastActionEval);
+    }
+
+    function goNextRound() {
+      // Preserve current round data for review before advancing
+      if (_lastRoundData) _prevRoundData = _lastRoundData;
+      nextRound();
+    }
+
+    // ═══════════════════════════════════════════════════════
     // Render Functions
     // ═══════════════════════════════════════════════════════
 
     function renderGameScreen(settlement, actionEval) {
       showScreen('game-screen');
+
+      // Save for review and for current re-render
+      if (settlement && game.phase === 'result') {
+        _lastRoundData = { hands: [...game.hands.map(h => [...h])], settlement, actionEval };
+        game._lastSettlement = settlement;
+        game._lastActionEval = actionEval;
+      }
 
       document.getElementById('round-num').textContent = game.roundNo;
       document.getElementById('obs-purse').textContent = `$${game.obsPurse}`;
@@ -266,9 +324,17 @@
         if (i === 0) rowClass += ' boss-row';
         if (isSelected) rowClass += ' selected-emp';
         if (clickable) rowClass += ' clickable-emp';
-        if (showTier && isEmp && settlement) {
-          const er = settlement.employeeResults[empLabel];
-          if (er) rowClass += er.won ? ' result-win' : ' result-lose';
+        if (showTier && settlement) {
+          if (isEmp) {
+            const er = settlement.employeeResults[empLabel];
+            if (er) {
+              rowClass += er.won ? ' result-win' : ' result-lose';
+              if (er.won && er.mult > 1) rowClass += ' result-mult';
+            }
+          } else {
+            // Boss row: only highlight multiplier (eating employee)
+            if (settlement.observerPnl < 0) rowClass += ' result-mult';
+          }
         }
 
         const clickAttr = clickable ? ` onclick="selectEmployee('${empLabel}')"` : '';
@@ -397,9 +463,13 @@
       const bar = document.getElementById('action-bar');
 
       if (game.phase === 'betting') {
+        const reviewBtn = _prevRoundData
+          ? `<button class="bet-btn btn-pass" onclick="${_reviewMode ? 'closeReview()' : 'reviewLastRound()'}">${_reviewMode ? '收起' : '回看'}</button>`
+          : '';
         bar.innerHTML = `
           <div class="action-row-single">
             <button class="bet-btn btn-run-dim" onclick="confirmRun()">退场</button>
+            ${reviewBtn}
             <button class="bet-btn btn-pass" onclick="onBet('SKIP',0)">跳过</button>
           </div>
         `;
@@ -415,7 +485,7 @@
           bar.innerHTML = `
             <div class="action-row-single">
               <button class="bet-btn btn-pass" onclick="showAnalysis()">分析</button>
-              <button class="continue-btn" onclick="nextRound()">下一局 →</button>
+              <button class="continue-btn" onclick="goNextRound()">下一局 →</button>
             </div>
           `;
         }
