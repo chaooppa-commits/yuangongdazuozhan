@@ -1259,3 +1259,101 @@ html, body {
 [data-theme="light"] .player-row.result-lose {
   box-shadow: inset 0 0 0 1px var(--accent);
 }
+
+/* ═══════ Review Overlay (Bottom Sheet) ═══════ */
+.review-overlay {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  top: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 100;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+}
+.review-overlay.show {
+  display: flex;
+}
+
+.review-sheet {
+  background: var(--bg2);
+  border-radius: 16px 16px 0 0;
+  padding: 20px 16px 32px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+}
+.review-header button {
+  background: var(--card-bg);
+  color: var(--text);
+  border: none;
+  border-radius: 50%;
+  width: 28px; height: 28px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.review-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.review-row:last-of-type {
+  border-bottom: none;
+}
+.review-lbl {
+  width: 40px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.review-cards {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+.rc {
+  width: 32px; height: 38px;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.95rem; font-weight: 700;
+  background: var(--card-bg);
+  color: var(--text);
+}
+.review-result {
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  width: 32px;
+  text-align: center;
+}
+.review-result.rw { color: var(--green); }
+.review-result.rl { color: var(--accent); }
+.review-row.rw { background: rgba(16,185,129,0.06); border-radius: 6px; padding: 8px 6px; }
+.review-row.rl { background: rgba(244,63,94,0.06); border-radius: 6px; padding: 8px 6px; }
+
+.review-pnl {
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-top: 12px;
+}
+.review-pnl.rw { color: var(--green); }
+.review-pnl.rl { color: var(--accent); }
