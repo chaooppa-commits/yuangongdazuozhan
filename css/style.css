@@ -22,6 +22,24 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+[data-theme="light"] {
+  --bg: #f5f5f7;
+  --bg2: #ffffff;
+  --card-bg: #e8e8ec;
+  --accent: #e11d48;
+  --green: #059669;
+  --gold: #d97706;
+  --blue: #2563eb;
+  --text: #1a1a2e;
+  --text-dim: #6b7280;
+  --danger: #dc2626;
+  --purple: #7c3aed;
+  --orange: #ea580c;
+  --border: #d1d5db;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
@@ -256,11 +274,19 @@ html, body {
 }
 
 .player-row.result-win {
-  box-shadow: inset 0 0 0 2px var(--green), var(--shadow);
+  box-shadow: inset 0 0 0 1px var(--green), var(--shadow);
+}
+
+.player-row.result-win.result-mult {
+  box-shadow: inset 0 0 0 1.5px var(--gold), var(--shadow);
+}
+
+.player-row.result-mult:not(.result-win):not(.result-lose) {
+  box-shadow: inset 0 0 0 1.5px var(--gold), var(--shadow);
 }
 
 .player-row.result-lose {
-  box-shadow: inset 0 0 0 2px var(--accent), var(--shadow);
+  box-shadow: inset 0 0 0 1px var(--accent), var(--shadow);
 }
 
 .hint-text {
@@ -301,23 +327,23 @@ html, body {
 }
 
 .card.visible {
-  background: linear-gradient(135deg, #1e293b, #0f172a);
-  border: 1.5px solid var(--blue);
+  background: linear-gradient(135deg, #222230, #18181f);
+  border: none;
   color: var(--text);
-  box-shadow: 0 2px 6px rgba(59,130,246,0.12);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
 
 .card.hidden {
   background: var(--card-bg);
-  border: 1.5px dashed var(--border);
+  border: none;
   color: var(--text-dim);
 }
 
 .card.revealed {
-  background: linear-gradient(135deg, #064e3b, #022c22);
-  border: 1.5px solid var(--green);
-  color: var(--green);
-  box-shadow: 0 2px 6px rgba(16,185,129,0.12);
+  background: linear-gradient(135deg, #222230, #18181f);
+  border: none;
+  color: var(--text);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
 
 .tier-badge {
@@ -1149,4 +1175,87 @@ html, body {
     border-radius: 16px;
     align-self: center;
   }
+}
+
+/* ═══════ Light Theme Overrides ═══════ */
+[data-theme="light"] .card.visible {
+  background: #f8fafa;
+  border: none;
+  color: #1a1a2e;
+  box-shadow: none;
+}
+
+[data-theme="light"] .card.hidden {
+  background: #f0f0f4;
+  border: none;
+  color: var(--text-dim);
+  box-shadow: none;
+}
+
+[data-theme="light"] .card.revealed {
+  background: #f8fafa;
+  border: none;
+  color: #1a1a2e;
+  box-shadow: none;
+}
+
+[data-theme="light"] .result-banner.win {
+  background: rgba(5, 150, 105, 0.1);
+}
+
+[data-theme="light"] .result-banner.lose {
+  background: rgba(225, 29, 72, 0.08);
+}
+
+[data-theme="light"] .player-row.clickable-emp:hover {
+  background: rgba(37, 99, 235, 0.06);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+[data-theme="light"] .player-row.selected-emp {
+  border-color: rgba(37, 99, 235, 0.6);
+  background: rgba(37, 99, 235, 0.06);
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.15);
+}
+
+[data-theme="light"] .modal-overlay {
+  background: rgba(0,0,0,0.4);
+}
+
+[data-theme="light"] .action-bar {
+  background: rgba(255,255,255,0.95);
+  border-top-color: var(--border);
+}
+
+[data-theme="light"] .top-bar {
+  background: rgba(255,255,255,0.9);
+}
+
+[data-theme="light"] .bet-btn.btn-pass {
+  background: var(--bg2);
+  color: var(--text);
+}
+
+[data-theme="light"] .bet-btn.btn-stake-opt {
+  background: var(--bg2);
+}
+
+[data-theme="light"] .start-btn {
+  background: linear-gradient(135deg, var(--accent), #be123c);
+}
+
+[data-theme="light"] .player-row.result-win {
+  box-shadow: inset 0 0 0 1px var(--green);
+}
+
+[data-theme="light"] .player-row.result-win.result-mult {
+  box-shadow: inset 0 0 0 1.5px var(--gold);
+}
+
+[data-theme="light"] .player-row.result-mult:not(.result-win):not(.result-lose) {
+  box-shadow: inset 0 0 0 1.5px var(--gold);
+}
+
+[data-theme="light"] .player-row.result-lose {
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
