@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>牛马大作战</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ═══════ Start Screen ═══════ -->
+  <div id="start-screen">
+    <h1>牛马大作战</h1>
+    <p class="subtitle">牛马的皮鞑准备好了吗？</p>
+  
+    <div class="config-group">
+      <label>你的昵称</label>
+      <input type="text" class="seed-input" id="username-input" placeholder="输入昵称" maxlength="12">
+    </div>
+  
+    <div class="config-group">
+      <label>带入金额</label>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-buyin="50" onclick="selectBuyin(50, this)">$50</button>
+        <button class="mode-btn" data-buyin="100" onclick="selectBuyin(100, this)">$100</button>
+        <button class="mode-btn" data-buyin="200" onclick="selectBuyin(200, this)">$200</button>
+      </div>
+    </div>
+  
+    <div class="config-group">
+      <label>如何侍候老板？</label>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="manual" onclick="selectMode('manual')">
+          亲手服侍
+          <div class="mode-desc">4/8/12/16</div>
+        </button>
+        <button class="mode-btn" data-mode="kelly" onclick="selectMode('kelly')">
+          懒得动手
+          <div class="mode-desc">1/2 Kelly</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="config-group">
+      <label>随机种子</label>
+      <input type="text" class="seed-input" id="seed-input" placeholder="留空表示随机">
+    </div>
+
+    <button class="start-btn" onclick="onStart()">老板快过来</button>
+  </div>
+
+  <!-- ═══════ Game Screen ═══════ -->
+  <div id="game-screen">
+    <!-- Top bar -->
+    <div class="top-bar">
+      <div class="round-info">
+        <span class="ri-tag">ALL </span><span class="ri-val" id="round-num">0</span>
+        <span class="ri-tag">IN </span><span class="ri-val" id="round-in">0</span>
+        <span class="ri-tag">WIN </span><span class="ri-val" id="round-win">0</span>
+      </div>
+      <div class="purse-display">
+        <div class="purse-item">
+          <div class="purse-label">牛马</div>
+          <div class="purse-value obs" id="obs-purse">$50</div>
+          <div class="purse-bar"><div class="purse-bar-fill obs" id="obs-bar" style="width:50%"></div></div>
+        </div>
+        <div class="purse-item">
+          <div class="purse-label">老板</div>
+          <div class="purse-value boss" id="boss-purse">$50</div>
+          <div class="purse-bar"><div class="purse-bar-fill boss" id="boss-bar" style="width:50%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PnL chart -->
+    <div class="pnl-chart-row">
+      <div class="pnl-chart">
+        <canvas id="pnl-canvas"></canvas>
+      </div>
+      <button class="tier-table-btn" onclick="showQuiz()" title="战力记忆练习"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M754.5 573.1c-16.8-14.3-42.1-12.3-56.4 4.5l-76.4 89.6-25.8-30.5c-14.3-16.9-39.5-19-56.4-4.7s-19 39.5-4.7 56.4l32.7 38.6 2.5 2.1c14.1 12 32.5 18.6 51.7 18.6s37.6-6.6 51.7-18.6l2.5-2.1 83.1-97.5c14.3-16.8 12.3-42.1-4.5-56.4zM348.3 562.8c-51.2 0-92.8 41.6-92.8 92.8s41.6 92.8 92.8 92.8 92.8-41.6 92.8-92.8-41.6-92.8-92.8-92.8z m0 105.6c-7.1 0-12.8-5.8-12.8-12.8s5.8-12.8 12.8-12.8 12.8 5.8 12.8 12.8-5.7 12.8-12.8 12.8zM348.3 275.6c-51.2 0-92.8 41.6-92.8 92.8s41.6 92.8 92.8 92.8 92.8-41.6 92.8-92.8-41.6-92.8-92.8-92.8z m0 105.6c-7.1 0-12.8-5.8-12.8-12.8s5.8-12.8 12.8-12.8 12.8 5.8 12.8 12.8-5.7 12.8-12.8 12.8zM641.3 461.2c51.2 0 92.8-41.6 92.8-92.8s-41.6-92.8-92.8-92.8-92.8 41.6-92.8 92.8 41.6 92.8 92.8 92.8z m0-105.6c7.1 0 12.8 5.8 12.8 12.8s-5.8 12.8-12.8 12.8-12.8-5.8-12.8-12.8 5.7-12.8 12.8-12.8z"/><path d="M813.2 99.7H210.8c-81.6 0-148.1 66.4-148.1 148.1v528.5c0 81.6 66.4 148.1 148.1 148.1h602.5c81.6 0 148.1-66.4 148.1-148.1V247.8c-0.1-81.7-66.5-148.1-148.2-148.1z m63.5 676.5c0 35-28.5 63.5-63.5 63.5H210.8c-35 0-63.5-28.5-63.5-63.5V247.8c0-35 28.5-63.5 63.5-63.5h602.5c35 0 63.5 28.5 63.5 63.5v528.4z"/></svg></button>
+      <button class="tier-table-btn" onclick="showTierTable()" title="战力表"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M769.1 69H254.9C171.7 69 104 136.7 104 219.9v584.2c0 83.2 67.7 150.9 150.9 150.9h514.2c83.2 0 150.9-67.7 150.9-150.9V219.9C920 136.7 852.3 69 769.1 69zM840 804.1c0 39.1-31.8 70.9-70.9 70.9H254.9c-39.1 0-70.9-31.8-70.9-70.9V219.9c0-39.1 31.8-70.9 70.9-70.9h514.2c39.1 0 70.9 31.8 70.9 70.9v584.2z"/><path d="M577.2 334c-10.6-27-36.2-44.5-65.2-44.5S457.4 307 446.8 334L311.4 679.9c-8 20.6 2.1 43.8 22.7 51.8 4.8 1.9 9.7 2.8 14.6 2.8 16 0 31.1-9.7 37.3-25.4l48.5-123.8h155.2l48.5 123.8c8 20.6 31.3 30.7 51.8 22.7 20.6-8 30.7-31.3 22.7-51.8L577.2 334zM465.7 505.3L512 386.9l46.3 118.3h-92.6z"/></svg></button>
+      <button class="tier-table-btn" onclick="toggleTheme()" id="theme-btn" title="切换主题"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M919.6 319L746.4 120.8l-0.7-0.8c-15.9-17.3-38.9-25.3-61.7-21.5-23.3 3.9-43 19.6-52.7 42-19.6 45.1-64 72.1-118.8 72.1h-1.9c-55.2 0.8-98.5-25.1-118.9-71.4-9.8-22.3-29.6-37.8-52.8-41.7-22.7-3.8-45.7 4.3-61.6 21.5l-0.3 0.4L104.4 319C79 346.8 65.1 383.5 65.1 422.5c0 39.2 14.1 76.1 39.7 103.9l0.3 0.3c26.4 28.7 62.8 44.6 100.3 44.6 3 0 6.1-0.1 9.2-0.3v215.4c0 77.2 62.8 140 140 140h314c77.2 0 140-62.8 140-140V570.9c3.4 0.3 6.9 0.4 10.3 0.4 37.5 0 73.8-15.9 100.2-44.6l0.2-0.2c25.6-27.8 39.7-64.8 39.7-103.9-0.1-39.1-14-75.8-39.4-103.6z m-59.3 153.3l-0.2 0.2c-13.4 14.5-31.6 21.1-50 18.1-20.4-3.4-41.2 2.3-57 15.7-15.7 13.3-24.7 32.7-24.7 53.3v226.8c0 33.1-26.9 60-60 60h-314c-33.1 0-60-26.9-60-60V559.8c0-20.5-8.9-39.8-24.5-53.1-12.8-11-29-16.9-45.6-16.9-3.6 0-7.3 0.3-11 0.9-18.2 2.9-36.3-3.8-49.5-18.1l-0.3-0.3c-24.8-27-24.8-72.6 0-99.6l0.3-0.4 161.3-184.7c16 29.8 38.9 54.7 67.1 72.8 34.5 22 76.3 33.2 120.9 32.2h0.5c80.1-0.4 149.1-40.5 184-105.9l162 185.3 0.7 0.8c24.8 26.9 24.8 72.5 0 99.5z"/></svg></button>
+    </div>
+
+    <!-- Card table -->
+    <div class="card-table" id="card-table">
+      <!-- Rendered dynamically -->
+    </div>
+
+    <!-- Result section (hidden until reveal) -->
+    <div class="result-section" id="result-section">
+      <!-- Rendered dynamically -->
+    </div>
+
+    <!-- Action bar -->
+    <div class="action-bar" id="action-bar">
+      <!-- Rendered dynamically -->
+    </div>
+  </div>
+
+  <!-- Review overlay -->
+  <div class="review-overlay" id="review-overlay"></div>
+
+  <!-- ═══════ End Screen ═══════ -->
+  <div id="end-screen">
+    <h2 id="end-title" style="display:none">对决结束</h2>
+    <p class="end-subtitle" id="end-subtitle" style="display:none"></p>
+    <div class="end-pnl-chart">
+      <canvas id="end-pnl-canvas"></canvas>
+    </div>
+    <div class="stats-grid" id="stats-grid">
+      <!-- Rendered dynamically -->
+    </div>
+    <div class="action-summary" id="action-summary">
+      <!-- 出手规范分析 -->
+    </div>
+    <div class="end-actions">
+      <button class="end-btn secondary" onclick="downloadLog()">日志</button>
+      <button class="end-btn secondary" onclick="showAnalysis()">分析</button>
+      <button class="end-btn primary" onclick="backToStart()">再战</button>
+    </div>
+  </div>
+
+  <!-- ═══════ Analysis Modal ═══════ -->
+  <div class="modal-overlay" id="analysis-modal" onclick="closeAnalysis(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>分析</h3>
+        <button class="modal-close" onclick="closeAnalysis()">&times;</button>
+      </div>
+      <div class="modal-body" id="analysis-body">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ Tier Table Modal ═══════ -->
+  <div class="modal-overlay" id="tier-table-modal" onclick="closeTierTable(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>战力表</h3>
+        <button class="modal-close" onclick="closeTierTable()">&times;</button>
+      </div>
+      <div class="modal-body" id="tier-table-body"></div>
+    </div>
+  </div>
+
+  <!-- ═══════ Quiz Modal ═══════ -->
+  <div class="modal-overlay" id="quiz-modal" onclick="closeQuiz(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>战力训练</h3>
+        <button class="modal-close" onclick="closeQuiz()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding-bottom:24px">
+        <div class="quiz-mode-tabs">
+          <button class="quiz-tab active" id="quiz-tab-mn" onclick="qSwitchMode('mn')">识别码</button>
+          <button class="quiz-tab" id="quiz-tab-tier" onclick="qSwitchMode('tier')">战力</button>
+        </div>
+        <div class="quiz-score-line" id="quiz-score-line">0 / 0 · 第 1 题</div>
+        <div id="quiz-area"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/game.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // ═══════════════════════════════════════════════════════
+    // UI Controller
+    // ═══════════════════════════════════════════════════════
+
+    let selectedMode = 'manual';
+
+    // ═══════════════════════════════════════════════════════
+    // Haptic + Audio Feedback (iOS-safe)
+    // ═══════════════════════════════════════════════════════
+    let _audioCtx = null;
+    let _clickBuf = null;
+
+    function tap() {
+      // Vibrate (Android only, iOS ignores)
+      if (navigator.vibrate) navigator.vibrate(10);
+      // Play click sound via AudioContext (iOS-safe, lowest latency)
+      if (_audioCtx && _clickBuf) {
+        try {
+          const src = _audioCtx.createBufferSource();
+          src.buffer = _clickBuf;
+          src.connect(_audioCtx.destination);
+          src.start(0);
+        } catch(e) {}
+      }
+    }
+
+    // Init audio on first user gesture (iOS requires user gesture to unlock)
+    function initAudio() {
+      if (_audioCtx) return;
+      try {
+        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        fetch('yinxiao/dianji.wav')
+          .then(r => r.arrayBuffer())
+          .then(buf => _audioCtx.decodeAudioData(buf))
+          .then(decoded => { _clickBuf = decoded; })
+          .catch(() => {});
+      } catch(e) {}
+    }
+
+    // Unlock AudioContext on first tap (iOS Safari requirement)
+    document.addEventListener('click', function unlockAudio() {
+      initAudio();
+      if (_audioCtx && _audioCtx.state === 'suspended') {
+        _audioCtx.resume();
+      }
+      document.removeEventListener('click', unlockAudio);
+    }, { once: true });
+
+    // 带入金额选择
+    let selectedBuyin = 50;
+    function selectBuyin(amount, btn) {
+      tap();
+      selectedBuyin = amount;
+      document.querySelectorAll('[data-buyin]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    // 用户名输入框：自动读取 localStorage
+    function initUsername() {
+      const saved = localStorage.getItem('doukou_username');
+      if (saved) document.getElementById('username-input').value = saved;
+    }
+
+    function selectMode(mode) {
+      tap();
+      selectedMode = mode;
+      document.querySelectorAll('[data-mode]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+    }
+
+    function onStart() {
+      tap();
+      _prevRoundData = null;
+      _lastRoundData = null;
+      document.getElementById('review-overlay').classList.remove('show');
+
+      // 保存用户名
+      const usernameInput = document.getElementById('username-input').value.trim();
+      const username = usernameInput || '匿名';
+      localStorage.setItem('doukou_username', username);
+      game._username = username;
+      game._buyin = selectedBuyin;
+
+      // 重置影子选手
+      shadowReset();
+      const seedStr = document.getElementById('seed-input').value.trim();
+      startGame(selectedMode === 'kelly', seedStr, selectedBuyin);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Screen Management
+    // ═══════════════════════════════════════════════════════
+
+    function showScreen(id) {
+      ['start-screen', 'game-screen', 'end-screen'].forEach(s => {
+        const el = document.getElementById(s);
+        el.style.display = (s === id) ? 'flex' : 'none';
+      });
+      window.scrollTo(0, 0);
+    }
+
+    function backToStart() {
+      showScreen('start-screen');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Theme Toggle
+    // ═══════════════════════════════════════════════════════
+    let _isDark = true;
+
+    function toggleTheme() {
+      tap();
+      _isDark = !_isDark;
+      document.documentElement.setAttribute('data-theme', _isDark ? 'dark' : 'light');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Last Round Review
+    // ═══════════════════════════════════════════════════════
+    let _prevRoundData = null; // previous round for review
+    let _lastRoundData = null; // { hands, settlement, actionEval }
+
+    // ═══════════════════════════════════════════════════════
+    // Shadow Player (影子选手)
+    // ═══════════════════════════════════════════════════════
+    const SHADOW_EXIT_THRESHOLD = 94; // 影子选手自成阈値
+
+    const shadow = {
+      purse: INITIAL_PURSE,
+      bet: 0, skip: 0, win: 0, lose: 0, totalStaked: 0,
+      exited: false,
+      pnlHistory: [0]
+    };
+
+    function shadowReset() {
+      shadow.purse = INITIAL_PURSE;
+      shadow.bet = 0; shadow.skip = 0;
+      shadow.win = 0; shadow.lose = 0;
+      shadow.totalStaked = 0;
+      shadow.exited = false;
+      shadow.pnlHistory = [0];
+    }
+
+    /**
+     * 计算某手牌对应的已出福星卡数量（在可见牌中）
+     * 当已出 >= 2 张时，tier 需要 -1
+     */
+    function countUsedBlessings(a, b, allVisible) {
+      const bless = blessingCards(a, b, []);  // 获取该组合的全部福星卡属性
+      let maxUsed = 0;
+      for (const bl of bless) {
+        const x = bl.value;
+        const total = CARD_COUNTS[x] || 0;
+        const used = allVisible.filter(c => c === x).length;
+        if (used > maxUsed) maxUsed = used;
+      }
+      return maxUsed;
+    }
+
+    /**
+     * 影子选手决策函数
+     * 返回 { target, amount } 或 { target: 'SKIP', amount: 0 }
+     */
+    function shadowDecide(hands, shadowPurse, bossPurse) {
+      // 影子选手检查退出阈値
+      if (shadowPurse >= SHADOW_EXIT_THRESHOLD) {
+        return { target: 'RUN', amount: 0 };
+      }
+
+      const allVisible = [];
+      for (let i = 0; i < 4; i++) allVisible.push(hands[i][0], hands[i][1]);
+
+      // 老板当前战力
+      const bossInfo = lookupTier(hands[0][0], hands[0][1]);
+      let bossTier = bossInfo ? Math.floor(bossInfo.tier) : 3;
+      const bossUsed = countUsedBlessings(hands[0][0], hands[0][1], allVisible);
+      if (bossUsed >= 2) bossTier = Math.max(1, bossTier - 1);
+
+      // 各员工当前战力
+      let bestTarget = null;
+      let bestAdjTier = -Infinity;
+
+      for (let i = 1; i <= 3; i++) {
+        const lbl = ['A', 'B', 'C'][i - 1];
+        const empInfo = lookupTier(hands[i][0], hands[i][1]);
+        let empTier = empInfo ? Math.floor(empInfo.tier) : 3;
+        const empUsed = countUsedBlessings(hands[i][0], hands[i][1], allVisible);
+        if (empUsed >= 2) empTier = Math.max(1, empTier - 1);
+
+        if (empTier > bestAdjTier) {
+          bestAdjTier = empTier;
+          bestTarget = lbl;
+        }
+      }
+
+      const gap = bestAdjTier - bossTier;
+
+      // 決策：差 >= 2 才投注
+      const gapStakeMap = { 2: 4, 3: 8, 4: 12, 5: 16 };
+      let stake = gapStakeMap[gap] || (gap >= 5 ? 16 : 0);
+
+      if (stake <= 0 || !bestTarget) return { target: 'SKIP', amount: 0 };
+
+      // 不能超过老板余额
+      stake = Math.min(stake, bossPurse, shadowPurse);
+      if (stake < 1) return { target: 'SKIP', amount: 0 };
+
+      return { target: bestTarget, amount: stake };
+    }
+
+    /**
+     * 在每局结算后同步影子选手的结果
+     * bossPurseAtBet 是投注时老板的笹码（影子用实际老板笹码限制）
+     */
+    function shadowSettle(hands, settlement, bossPurseForCap) {
+      if (shadow.exited) return;
+
+      const dec = shadowDecide(hands, shadow.purse, bossPurseForCap);
+      game._shadowLastDec = dec; // 保存当局决策以便写入日志
+
+      if (dec.target === 'RUN') {
+        shadow.exited = true;
+        shadow.pnlHistory.push(shadow.purse - INITIAL_PURSE);
+        return;
+      }
+      if (dec.target === 'SKIP' || dec.amount <= 0) {
+        shadow.skip++;
+        shadow.pnlHistory.push(shadow.pnlHistory[shadow.pnlHistory.length - 1]);
+        return;
+      }
+
+      // 影子投注
+      const er = settlement.employeeResults[dec.target];
+      shadow.bet++;
+      shadow.totalStaked += dec.amount;
+      let pnl = 0;
+      if (er.won) {
+        pnl = Math.min(dec.amount * er.mult, bossPurseForCap);
+        shadow.win++;
+      } else {
+        pnl = -dec.amount;
+        shadow.lose++;
+      }
+      shadow.purse += pnl;
+      if (shadow.purse < 0) shadow.purse = 0;
+      const cum = shadow.pnlHistory[shadow.pnlHistory.length - 1] + pnl;
+      shadow.pnlHistory.push(cum);
+    }
+
+    function showReview() {
+      tap();
+      if (!_prevRoundData) return;
+      const d = _prevRoundData;
+      const s = d.settlement;
+      const labels = ['Boss', 'A', 'B', 'C'];
+
+      let html = '<div class="review-sheet">';
+      html += '<div class="review-header"><span>回看上一局</span><button onclick="closeReview()">✕</button></div>';
+
+      // Card rows
+      for (let i = 0; i < 4; i++) {
+        const hand = d.hands[i];
+        const isEmp = i >= 1;
+        const lbl = labels[i];
+        let cls = 'review-row';
+        if (isEmp) {
+          const er = s.employeeResults[lbl];
+          if (er) cls += er.won ? ' rw' : ' rl';
+        }
+        html += `<div class="${cls}">`;
+        html += `<span class="review-lbl">${lbl}</span>`;
+        html += '<span class="review-cards">';
+        for (let j = 0; j < 5; j++) html += `<span class="rc">${hand[j]}</span>`;
+        html += '</span>';
+        if (isEmp) {
+          const er = s.employeeResults[lbl];
+          if (er) {
+            const mark = er.won ? '胜' : '负';
+            const mult = er.won && er.mult > 1 ? ` ×${er.mult}` : '';
+            html += `<span class="review-result ${er.won ? 'rw' : 'rl'}">${mark}${mult}</span>`;
+          }
+        } else {
+          html += `<span class="review-result ${s.observerPnl < 0 ? 'rw' : 'rl'}">${s.observerPnl < 0 ? '吃' : '亏'}</span>`;
+        }
+        html += '</div>';
+      }
+
+      // PnL
+      const pnl = s.observerPnl;
+      html += `<div class="review-pnl ${pnl > 0 ? 'rw' : 'rl'}">${pnl > 0 ? '+' : ''}${pnl}</div>`;
+      html += '</div>';
+
+      document.getElementById('review-overlay').innerHTML = html;
+      document.getElementById('review-overlay').classList.add('show');
+    }
+
+    function closeReview() {
+      tap();
+      document.getElementById('review-overlay').classList.remove('show');
+    }
+
+    function goNextRound() {
+      // Preserve current round data for review before advancing
+      if (_lastRoundData) _prevRoundData = _lastRoundData;
+      nextRound();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Render Functions
+    // ═══════════════════════════════════════════════════════
+
+    function renderGameScreen(settlement, actionEval) {
+      showScreen('game-screen');
+
+      // Save for review and for current re-render
+      if (settlement && game.phase === 'result') {
+        _lastRoundData = { hands: [...game.hands.map(h => [...h])], settlement, actionEval };
+        game._lastSettlement = settlement;
+        game._lastActionEval = actionEval;
+        // 影子选手结算（用结算前的老板笹码限额：当前 bossPurse 已变，还原）
+        const bossPurseBeforeSettle = game.bossPurse - settlement.bossPnl;
+        shadowSettle(game.hands, settlement, bossPurseBeforeSettle);
+        // 把影子选手当局数据追加到最后一条 round log
+        const lastLog = game.log[game.log.length - 1];
+        if (lastLog && lastLog.type === 'round') {
+          const dec = game._shadowLastDec || {};
+          lastLog.shadow = {
+            target: dec.target || 'SKIP',
+            amount: dec.amount || 0,
+            purseAfter: shadow.purse,
+            exited: shadow.exited
+          };
+        }
+      }
+
+      document.getElementById('round-num').textContent = game.roundNo;
+      document.getElementById('round-in').textContent = game.stats.bet || 0;
+      document.getElementById('round-win').textContent = game.stats.win || 0;
+      document.getElementById('obs-purse').textContent = `$${game.obsPurse}`;
+      document.getElementById('boss-purse').textContent = `$${game.bossPurse}`;
+
+      const totalPurse = game.obsPurse + game.bossPurse;
+      const obsPct = Math.max(0, Math.min(100, (game.obsPurse / totalPurse) * 100));
+      const bossPct = Math.max(0, Math.min(100, (game.bossPurse / totalPurse) * 100));
+      document.getElementById('obs-bar').style.width = obsPct + '%';
+      document.getElementById('boss-bar').style.width = bossPct + '%';
+
+      renderCardTable(settlement);
+      renderPnlChart();
+
+      if (settlement && game.phase === 'result') {
+        renderResult(settlement, actionEval);
+      } else {
+        document.getElementById('result-section').classList.remove('show');
+      }
+
+      renderActionBar();
+    }
+
+    function renderCardTable(settlement) {
+      const table = document.getElementById('card-table');
+      const isRevealed = game.phase === 'revealing' || game.phase === 'result';
+      const showTier = game.phase === 'result';
+      const isBetting = game.phase === 'betting';
+      const allVisibleCards = [];
+
+      game.hands.forEach((hand, i) => {
+        allVisibleCards.push(hand[0], hand[1]);
+      });
+
+      let html = '';
+      const labels = ['Boss', 'A', 'B', 'C'];
+      const labelClasses = ['boss', 'emp-a', 'emp-b', 'emp-c'];
+
+      for (let i = 0; i < 4; i++) {
+        const hand = game.hands[i];
+        const v = [hand[0], hand[1]];
+        const tierInfo = lookupTier(v[0], v[1]);
+        const tier = tierInfo ? tierInfo.tier : '-';
+
+        const blessings = blessingCards(v[0], v[1], allVisibleCards);
+        const blessingStr = blessings.map(b => `{${b.value}}\u00d7${b.remaining}`).join(' ');
+
+        const empLabel = labels[i];
+        const isEmp = i >= 1;
+        const isSelected = isBetting && isEmp && manualTarget === empLabel;
+        const clickable = isBetting && isEmp;
+
+        let rowClass = 'player-row';
+        if (i === 0) rowClass += ' boss-row';
+        if (isSelected) rowClass += ' selected-emp';
+        if (clickable) rowClass += ' clickable-emp';
+        if (showTier && settlement) {
+          if (isEmp) {
+            const er = settlement.employeeResults[empLabel];
+            if (er) {
+              rowClass += er.won ? ' result-win' : ' result-lose';
+              if (er.won && er.mult > 1) rowClass += ' result-mult';
+            }
+          } else {
+            // Boss row: no border highlights
+          }
+        }
+
+        const clickAttr = clickable ? ` onclick="selectEmployee('${empLabel}')"` : '';
+
+        html += `<div class="${rowClass}"${clickAttr}>`;
+        html += `<div class="player-label ${labelClasses[i]}">${labels[i]}</div>`;
+        html += `<div class="cards-display">`;
+        html += `<div class="card visible"><span class="card-corner tl">${v[0]}</span><span class="card-center">${v[0]}</span><span class="card-corner br">${v[0]}</span></div>`;
+        html += `<div class="card visible"><span class="card-corner tl">${v[1]}</span><span class="card-center">${v[1]}</span><span class="card-corner br">${v[1]}</span></div>`;
+
+        if (isRevealed) {
+          for (let j = 2; j < 5; j++) {
+            html += `<div class="card revealed"><span class="card-corner tl">${hand[j]}</span><span class="card-center">${hand[j]}</span><span class="card-corner br">${hand[j]}</span></div>`;
+          }
+        } else {
+          for (let j = 2; j < 5; j++) {
+            html += `<div class="card hidden"><span class="card-center">?</span></div>`;
+          }
+        }
+        html += `</div>`;
+
+        if (showTier && tierInfo) {
+          const starLbl = tierInfo.tier + '星';
+          html += `<div class="tier-info-col">`;
+          html += `<span class="tier-badge tier-${tierInfo.tier}">${starLbl}</span>`;
+          html += `<div class="blessing-hint"><span class="mn-tag">${tierInfo.mn}</span> <span class="mp-tag">${tierInfo.mp}%</span></div>`;
+          html += `</div>`;
+        } else if (isBetting && isSelected && tierInfo) {
+          const starLbl = tierInfo.tier + '星';
+          html += `<div class="tier-info-col">`;
+          html += `<span class="tier-badge tier-${tierInfo.tier}">${starLbl}</span>`;
+          html += `<div class="blessing-hint"><span class="mn-tag">${tierInfo.mn}</span> <span class="mp-tag">${tierInfo.mp}%</span></div>`;
+          html += `</div>`;
+        } else {
+          html += `<div class="blessing-hint">${blessingStr || '-'}</div>`;
+        }
+
+        html += `</div>`;
+      }
+
+      // Stake picker shown below cards when employee selected
+      if (isBetting && manualTarget) {
+        html += buildStakePickerHtml(manualTarget);
+      }
+
+      table.innerHTML = html;
+    }
+
+    function renderResult(settlement, actionEval) {
+      const section = document.getElementById('result-section');
+      section.classList.add('show');
+
+      let html = '';
+      const target = game.currentBet.target;
+      if (target === 'SKIP') {
+        html += `<div class="result-banner skip">- 跳过本局 -</div>`;
+      } else {
+        const pnl = settlement.observerPnl;
+        if (pnl > 0) {
+          html += `<div class="result-banner win">+${pnl} 员工${target}胜!</div>`;
+        } else {
+          html += `<div class="result-banner lose">${pnl} 员工${target}负</div>`;
+        }
+      }
+
+      // 动作评价标签
+      if (actionEval) {
+        const tagClass = actionEval.tag === '理性' ? 'tag-rational' : actionEval.tag === '冒进' ? 'tag-aggressive' : 'tag-conservative';
+        html += `<div class="action-eval-row">`;
+        html += `<span class="action-tag ${tagClass}">${actionEval.tag}</span>`;
+        html += `<span class="action-reason">${actionEval.detail || ''}</span>`;
+        html += `</div>`;
+      }
+
+      // 本局出手统计
+      const actionStats = getActionStats();
+      html += `<div class="action-stats">`;
+      html += `<div class="action-stats-title">本局出手规范统计</div>`;
+      html += `<div class="action-stats-grid">`;
+      for (const tag of ['理性', '冒进', '保守']) {
+        const s = actionStats[tag];
+        const betPct = s.betCount > 0 ? (s.betWin / s.betCount * 100).toFixed(0) + '%' : '-';
+        const passPct = s.passCount > 0 ? (s.passWin / s.passCount * 100).toFixed(0) + '%' : '-';
+        const tagCls = tag === '理性' ? 'tag-rational' : tag === '冒进' ? 'tag-aggressive' : 'tag-conservative';
+        html += `<div class="action-stats-item">`;
+        html += `<span class="action-tag ${tagCls}">${tag}</span>`;
+        html += `<span class="action-stats-count">${s.count}局</span>`;
+        html += `<span class="action-stats-pct">IN ${betPct} | PASS ${passPct}</span>`;
+        html += `</div>`;
+      }
+      html += `</div>`;
+      html += `</div>`;
+
+      html += `<div class="structure-list">`;
+      const labels = ['Boss', 'A', 'B', 'C'];
+      for (let i = 0; i < 4; i++) {
+        const struct = explainHand(game.hands[i]);
+        const v = [game.hands[i][0], game.hands[i][1]];
+        const ti = lookupTier(v[0], v[1]);
+        const tierStr = ti ? `<span class="tier-badge tier-${ti.tier}" style="font-size:0.65rem;padding:1px 4px">${ti.tier}星</span> <span class="mn-tag">${ti.mn}</span> <span class="mp-tag">${ti.mp}%</span>` : '';
+        html += `<div class="structure-item">`;
+        html += `<div class="struct-label">${labels[i]} ${tierStr}</div>`;
+        html += `<div class="struct-text">${struct}</div>`;
+        html += `</div>`;
+      }
+      html += `</div>`;
+
+      html += `<div class="emp-results">`;
+      for (const lbl of ['A', 'B', 'C']) {
+        const er = settlement.employeeResults[lbl];
+        const cls = er.won ? 'emp-win' : 'emp-lose';
+        const mark = er.won ? '胜' : '负';
+        const multStr = er.won && er.mult > 1 ? ` \u00d7${er.mult}` : '';
+        html += `<div class="emp-result-row">`;
+        html += `<span class="emp-label">员工${lbl}</span>`;
+        html += `<span class="${cls}">${mark}${multStr}</span>`;
+        html += `<span class="emp-reason" style="font-size:0.7rem;color:var(--text-dim)">${er.reason}</span>`;
+        html += `</div>`;
+      }
+      html += `</div>`;
+
+      section.innerHTML = html;
+    }
+
+    function renderActionBar() {
+      const bar = document.getElementById('action-bar');
+
+      if (game.phase === 'betting') {
+        const reviewBtn = _prevRoundData
+          ? '<button class="bet-btn btn-pass" onclick="showReview()">回看</button>'
+          : '';
+        bar.innerHTML = `
+          <div class="action-row-single">
+            <button class="bet-btn btn-run-dim" onclick="confirmRun()">退场</button>
+            ${reviewBtn}
+            <button class="bet-btn btn-pass" onclick="onBet('SKIP',0)">跳过</button>
+          </div>
+        `;
+      } else if (game.phase === 'result') {
+        const gameOver = game.obsPurse <= 0 || game.bossPurse <= 0;
+        if (gameOver) {
+          bar.innerHTML = `
+            <div class="action-row-single">
+              <button class="continue-btn" onclick="endGame('normal')">查看结算</button>
+            </div>
+          `;
+        } else {
+          bar.innerHTML = `
+            <div class="action-row-single">
+              <button class="bet-btn btn-pass" onclick="showAnalysis()">分析</button>
+              <button class="continue-btn" onclick="goNextRound()">下一局 →</button>
+            </div>
+          `;
+        }
+      } else {
+        bar.innerHTML = '';
+      }
+    }
+
+    function confirmRun() {
+      tap();
+      if (confirm('确认退场？')) {
+        onBet('RUN', 0);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Card-Click Employee Selection
+    // ═══════════════════════════════════════════════════════
+
+    let manualTarget = null;
+
+    function selectEmployee(target) {
+      if (game.phase !== 'betting') return;
+      tap();
+      // Toggle: clicking same employee deselects
+      if (manualTarget === target) {
+        manualTarget = null;
+      } else {
+        manualTarget = target;
+      }
+      renderCardTable();
+      renderActionBar();
+    }
+
+    function buildStakePickerHtml(target) {
+      const ks = game.kellyMode ? kellyStake(game.obsPurse, game.bossPurse) : 0;
+      let html = '<div class="stake-picker">';
+
+      if (game.kellyMode) {
+        html += `<span class="stake-picker-label">押${target}</span>`;
+        html += `<button class="bet-btn btn-stake-opt" onclick="onBetAndReset('${target}',${ks})">$${ks}</button>`;
+      } else {
+        const validStakes = STAKE_OPTIONS.filter(s => s <= game.obsPurse && s <= game.bossPurse);
+        html += `<span class="stake-picker-label">押${target}</span>`;
+        for (const s of validStakes) {
+          if (s === 16) {
+            html += `<button class="bet-btn btn-stake-opt btn-stake-max" onclick="confirmStake16('${target}')">$${s}</button>`;
+          } else {
+            html += `<button class="bet-btn btn-stake-opt" onclick="onBetAndReset('${target}',${s})">$${s}</button>`;
+          }
+        }
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    function onBetAndReset(target, amount) {
+      tap();
+      manualTarget = null;
+      onBet(target, amount);
+    }
+
+    function confirmStake16(target) {
+      tap();
+      if (confirm('投注 $16 — 确认大注？')) {
+        manualTarget = null;
+        onBet(target, 16);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Bet Handler
+    // ═══════════════════════════════════════════════════════
+
+    function onBet(target, amount) {
+      tap();
+      placeBet(target, amount);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // End Screen
+    // ═══════════════════════════════════════════════════════
+
+    function renderEndScreen() {
+      showScreen('end-screen');
+      // 渲染结束页面筹码曲线（需要等DOM可见后再画）
+      setTimeout(renderEndPnlChart, 50);
+
+      const netPnl = game.obsPurse - INITIAL_PURSE;
+
+      const totalBet = game.stats.bet;
+      const winRate = totalBet > 0 ? (game.stats.win / totalBet * 100).toFixed(0) : 0;
+      const roi = game.stats.totalStaked > 0 ? (netPnl / game.stats.totalStaked * 100).toFixed(0) : 0;
+      
+      // 影子选手数据
+      const shadowNetPnl = shadow.purse - INITIAL_PURSE;
+      const shadowWinRate = shadow.bet > 0 ? (shadow.win / shadow.bet * 100).toFixed(0) : 0;
+      const shadowRoi = shadow.totalStaked > 0 ? (shadowNetPnl / shadow.totalStaked * 100).toFixed(0) : 0;
+      const shadowRounds = shadow.bet + shadow.skip;
+      
+      function sc(myVal, shVal, label) {
+        return `<div class="stat-card">
+          <div class="stat-value">${myVal}</div>
+          <div class="stat-label">${label}</div>
+          <div class="stat-shadow">${shVal}</div>
+        </div>`;
+      }
+      
+      const grid = document.getElementById('stats-grid');
+      grid.innerHTML = `
+        <div class="stat-card highlight">
+          <div class="stat-value">$${game.obsPurse}</div>
+          <div class="stat-label">最终筹码</div>
+          <div class="stat-shadow">$${shadow.purse}${shadow.exited ? ' (已退)' : ''}</div>
+        </div>
+        <div class="stat-card ${netPnl >= 0 ? 'positive' : 'negative'}">
+          <div class="stat-value">${netPnl >= 0 ? '+' : ''}${netPnl}</div>
+          <div class="stat-label">净盈产</div>
+          <div class="stat-shadow">${shadowNetPnl >= 0 ? '+' : ''}${shadowNetPnl}</div>
+        </div>
+        ${sc(game.roundNo, shadowRounds, '总局数')}
+        ${sc(`${totalBet}/${game.roundNo - totalBet}`, `${shadow.bet}/${shadow.skip}`, '下注/跳过')}
+        ${sc(winRate + '%', shadowWinRate + '%', '胜率')}
+        ${sc(roi + '%', shadowRoi + '%', 'ROI')}
+        <div class="stat-card">
+          <div class="stat-value">${game.stats.win}/${game.stats.lose}</div>
+          <div class="stat-label">胜/负</div>
+          <div class="stat-shadow">${shadow.win}/${shadow.lose}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">A${game.stats.betTargetCount.A} B${game.stats.betTargetCount.B} C${game.stats.betTargetCount.C}</div>
+          <div class="stat-label">押注分布</div>
+          <div class="stat-shadow">影子自动</div>
+        </div>
+      `;
+
+      // 出手规范分析总结
+      const actionStats = getActionStats();
+      const summaryDiv = document.getElementById('action-summary');
+      let summaryHtml = '<div class="action-summary-title">出手规范分析</div>';
+      summaryHtml += '<div class="action-summary-grid">';
+      for (const tag of ['理性', '冒进', '保守']) {
+        const s = actionStats[tag];
+        const betPct = s.betCount > 0 ? (s.betWin / s.betCount * 100).toFixed(0) + '%' : '-';
+        const passPct = s.passCount > 0 ? (s.passWin / s.passCount * 100).toFixed(0) + '%' : '-';
+        const tagCls = tag === '理性' ? 'tag-rational' : tag === '冒进' ? 'tag-aggressive' : 'tag-conservative';
+        summaryHtml += `<div class="action-summary-item">`;
+        summaryHtml += `<span class="action-tag ${tagCls}">${tag}</span>`;
+        summaryHtml += `<span class="action-summary-count">${s.count}局</span>`;
+        summaryHtml += `<span class="action-summary-pct">IN ${betPct}</span>`;
+        summaryHtml += `<span class="action-summary-pct">PASS ${passPct}</span>`;
+        summaryHtml += `</div>`;
+      }
+      summaryHtml += '</div>';
+      summaryDiv.innerHTML = summaryHtml;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // PnL Mini Chart
+    // ═══════════════════════════════════════════════════════
+
+    function renderPnlChart() {
+      const canvas = document.getElementById('pnl-canvas');
+      const ctx = canvas.getContext('2d');
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * 2;
+      canvas.height = rect.height * 2;
+      ctx.scale(2, 2);
+
+      const w = rect.width;
+      const h = rect.height;
+      const data = game.pnlHistory;
+      const shData = shadow.pnlHistory;
+
+      if (data.length < 2) {
+        ctx.clearRect(0, 0, w, h);
+        return;
+      }
+
+      const allVals = [...data, ...shData, 0];
+      const minVal = Math.min(...allVals);
+      const maxVal = Math.max(...allVals);
+      const range = Math.max(maxVal - minVal, 1);
+
+      ctx.clearRect(0, 0, w, h);
+
+      const zeroY = h - ((0 - minVal) / range) * (h - 8) - 4;
+      ctx.strokeStyle = 'rgba(156,163,175,0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, zeroY);
+      ctx.lineTo(w, zeroY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Shadow curve (gray)
+      if (shData.length >= 2) {
+        ctx.strokeStyle = 'rgba(156,163,175,0.5)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        for (let i = 0; i < shData.length; i++) {
+          const x = (i / (shData.length - 1)) * w;
+          const y = h - ((shData[i] - minVal) / range) * (h - 8) - 4;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Player curve
+      ctx.strokeStyle = data[data.length - 1] >= 0 ? '#10b981' : '#f43f5e';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < data.length; i++) {
+        const x = (i / (data.length - 1)) * w;
+        const y = h - ((data[i] - minVal) / range) * (h - 8) - 4;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      const lastX = w;
+      const lastY = h - ((data[data.length - 1] - minVal) / range) * (h - 8) - 4;
+      ctx.lineTo(lastX, zeroY);
+      ctx.lineTo(0, zeroY);
+      ctx.closePath();
+      ctx.fillStyle = data[data.length - 1] >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)';
+      ctx.fill();
+    }
+
+    function renderEndPnlChart() {
+      const canvas = document.getElementById('end-pnl-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * 2;
+      canvas.height = rect.height * 2;
+      ctx.scale(2, 2);
+
+      const w = rect.width;
+      const h = rect.height;
+      const data = game.pnlHistory;
+      const shData = shadow.pnlHistory;
+
+      if (data.length < 2) return;
+
+      const allVals = [...data, ...shData, 0];
+      const minVal = Math.min(...allVals);
+      const maxVal = Math.max(...allVals);
+      const range = Math.max(maxVal - minVal, 1);
+
+      ctx.clearRect(0, 0, w, h);
+
+      const zeroY = h - ((0 - minVal) / range) * (h - 8) - 4;
+      ctx.strokeStyle = 'rgba(156,163,175,0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, zeroY);
+      ctx.lineTo(w, zeroY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Shadow curve
+      if (shData.length >= 2) {
+        ctx.strokeStyle = 'rgba(156,163,175,0.55)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        for (let i = 0; i < shData.length; i++) {
+          const x = (i / (shData.length - 1)) * w;
+          const y = h - ((shData[i] - minVal) / range) * (h - 8) - 4;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Player curve
+      ctx.strokeStyle = data[data.length - 1] >= 0 ? '#10b981' : '#f43f5e';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < data.length; i++) {
+        const x = (i / (data.length - 1)) * w;
+        const y = h - ((data[i] - minVal) / range) * (h - 8) - 4;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      ctx.lineTo(w, zeroY);
+      ctx.lineTo(0, zeroY);
+      ctx.closePath();
+      ctx.fillStyle = data[data.length - 1] >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)';
+      ctx.fill();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Analysis Modal
+    // ═══════════════════════════════════════════════════════
+
+    function showAnalysis() {
+      const a = analyzeSession();
+      if (!a) return;
+      renderAnalysis(a);
+      document.getElementById('analysis-modal').classList.add('show');
+    }
+
+    function closeAnalysis(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById('analysis-modal').classList.remove('show');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Tier Table Modal
+    // ═══════════════════════════════════════════════════════
+
+    const TIER_GROUPS = [
+      { star: 5, label: '5星', groups: [
+        { mnemonic: '1234', hands: [[1,8],[2,7],[3,6],[4,5]] },
+        { mnemonic: '12',   hands: [[1,2],[2,3]] },
+      ]},
+      { star: 4, label: '4星', groups: [
+        { mnemonic: '127', hands: [[1,3],[2,4],[7,8]] },
+        { mnemonic: '235', hands: [[2,5],[3,8],[5,8]] },
+        { mnemonic: '631', hands: [[6,8],[3,4],[1,4]] },
+      ]},
+      { star: 3, label: '3星', groups: [
+        { mnemonic: '234',  hands: [[2,6],[3,5],[4,8]] },
+        { mnemonic: '876',  hands: [[8,9],[7,9],[6,7]] },
+        { mnemonic: '554',  hands: [[5,7],[5,6],[4,7]] },
+        { mnemonic: '1156', hands: [[1,5],[1,1],[5,9],[6,9]] },
+      ]},
+      { star: 2, label: '2星', groups: [
+        { mnemonic: '4311', hands: [[4,9],[3,9],[1,6],[1,7]] },
+        { mnemonic: '222',  hands: [[2,2],[2,8],[2,9]] },
+      ]},
+      { star: 1, label: '1星', groups: [
+        { mnemonic: '3348', hands: [[3,3],[3,7],[4,6],[8,8]] },
+        { mnemonic: '479',  hands: [[4,4],[7,7],[9,9]] },
+        { mnemonic: '156',  hands: [[1,9],[6,6],[5,5]] },
+      ]},
+    ];
+
+    function showTierTable() {
+      const body = document.getElementById('tier-table-body');
+      let html = '';
+      for (const tier of TIER_GROUPS) {
+        html += `<div class="tier-group">`;
+        html += `<div class="tier-group-title"><span class="tier-badge tier-${tier.star}">${tier.label}</span></div>`;
+        for (const g of tier.groups) {
+          html += `<div class="tier-group-row">`;
+          html += `<span class="tier-mnemonic">${g.mnemonic}</span>`;
+          for (const [a, b] of g.hands) {
+            const key = [Math.min(a,b), Math.max(a,b)].join(',');
+            const info = CORRECTED_TABLE[key];
+            const pct = info ? info.p_eq.toFixed(0) + '%' : '-';
+            html += `<span class="tier-hand-item">(${a},${b}) <em>${pct}</em></span>`;
+          }
+          html += `</div>`;
+        }
+        html += `</div>`;
+      }
+      body.innerHTML = html;
+      document.getElementById('tier-table-modal').classList.add('show');
+    }
+
+    function closeTierTable(e) {
+      if (e && e.target !== e.currentTarget) return;
+      document.getElementById('tier-table-modal').classList.remove('show');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Quiz Modal
+    // ═══════════════════════════════════════════════════════
+    const _qALL_ENTRIES = Object.entries(CORRECTED_TABLE).map(([key, v]) => {
+      const [a, b] = key.split(',').map(Number);
+      return { a, b, key, tier: Math.floor(v.tier), mn: v.mn, mp: v.mp };
+    });
+    const _qALL_MN = [...new Set(_qALL_ENTRIES.map(e => e.mn))];
+
+    let _qMode = 'mn';
+    let _qCorrect = 0;
+    let _qTotal = 0;
+    let _qNo = 1;
+    let _qPending = false;
+    let _qMnQ = null;
+    let _qMnSelected = new Set();
+    let _qMnSubmitted = false;
+    let _qTierQ = null;
+    let _qTierSubmitted = false;
+
+    function _qShuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function _qUpdateScore() {
+      document.getElementById('quiz-score-line').textContent =
+        `${_qCorrect} / ${_qTotal} · 第 ${_qNo} 题`;
+    }
+
+    function showQuiz() {
+      tap();
+      document.getElementById('quiz-modal').classList.add('show');
+      if (!_qMnQ && !_qTierQ) _qNextQuestion();
+    }
+
+    function closeQuiz(e) {
+      if (e && e.target !== e.currentTarget) return;
+      tap();
+      document.getElementById('quiz-modal').classList.remove('show');
+    }
+
+    function qSwitchMode(mode) {
+      tap();
+      _qMode = mode;
+      _qPending = false;
+      document.getElementById('quiz-tab-mn').classList.toggle('active', mode === 'mn');
+      document.getElementById('quiz-tab-tier').classList.toggle('active', mode === 'tier');
+      _qNextQuestion();
+    }
+
+    // ――― 识别码模式 ―――
+    function _qBuildMn() {
+      const mn = _qALL_MN[Math.floor(Math.random() * _qALL_MN.length)];
+      const correctEntries = _qALL_ENTRIES.filter(e => e.mn === mn);
+      const correctKeys = new Set(correctEntries.map(e => e.key));
+      const distractors = _qShuffle(_qALL_ENTRIES.filter(e => !correctKeys.has(e.key)));
+      const needed = Math.max(0, 8 - correctEntries.length);
+      const optionPool = _qShuffle([...correctEntries, ...distractors.slice(0, needed)]);
+      _qMnQ = { mn, correctKeys, options: optionPool };
+      _qMnSelected = new Set();
+      _qMnSubmitted = false;
+    }
+
+    function _qRenderMn() {
+      if (!_qMnQ) _qBuildMn();
+      const q = _qMnQ;
+      // 选项按组合号从小到大排序（a升序，a相同则b升序）
+      const sortedOpts = [...q.options].sort((x, y) => x.a !== y.a ? x.a - y.a : x.b - y.b);
+      let html = '<div class="quiz-card">';
+      html += '<div class="quiz-label">识别码（口诀）</div>';
+      html += `<div class="quiz-mnemonic">${q.mn}</div>`;
+      html += '<div class="quiz-label">选出所有属于该口诀的组合</div>';
+      html += '<div class="quiz-options-grid">';
+      for (const entry of sortedOpts) {
+        let cls = 'quiz-option';
+        if (_qMnSubmitted) {
+          const isC = q.correctKeys.has(entry.key);
+          const isSel = _qMnSelected.has(entry.key);
+          if (isC) cls += ' correct';
+          else if (isSel) cls += ' wrong';
+        } else if (_qMnSelected.has(entry.key)) cls += ' selected';
+        const label = `${entry.a}-${entry.b}`;
+        const onclick = _qMnSubmitted ? '' : `onclick="qMnToggle('${entry.key}')"` ;
+        html += `<button class="${cls}" ${onclick}><span class="opt-pair">${label}</span><span class="opt-mp">${entry.mp}</span></button>`;
+      }
+      html += '</div>';
+      html += `<div class="quiz-feedback" id="quiz-feedback"></div>`;
+      const disabled = _qMnSubmitted ? 'disabled' : '';
+      html += `<button class="quiz-submit-btn" onclick="qMnSubmit()" ${disabled}>提交</button>`;
+      html += '</div>';
+      document.getElementById('quiz-area').innerHTML = html;
+    }
+
+    function qMnToggle(key) {
+      if (_qMnSubmitted || _qPending) return;
+      if (_qMnSelected.has(key)) _qMnSelected.delete(key);
+      else _qMnSelected.add(key);
+      _qRenderMn();
+    }
+
+    function qMnSubmit() {
+      if (_qMnSubmitted || _qPending) return;
+      const q = _qMnQ;
+      const selArr = [..._qMnSelected].sort();
+      const corArr = [...q.correctKeys].sort();
+      const isRight = selArr.length === corArr.length && selArr.every((k,i) => k === corArr[i]);
+      _qMnSubmitted = true;
+      _qTotal++;
+      if (isRight) _qCorrect++;
+      _qUpdateScore();
+      _qRenderMn();
+      const fb = document.getElementById('quiz-feedback');
+      if (isRight) {
+        fb.textContent = '✓ 正确！'; fb.className = 'quiz-feedback ok';
+        _qPending = true;
+        setTimeout(() => { _qPending = false; _qNo++; _qBuildMn(); _qRenderMn(); _qUpdateScore(); }, 2000);
+      } else {
+        _qMnSubmitted = false;
+        _qRenderMn();
+        document.getElementById('quiz-feedback').textContent = '✗ 错误，继续选择正确答案';
+        document.getElementById('quiz-feedback').className = 'quiz-feedback err';
+      }
+    }
+
+    // ――― 战力模式 ―――
+    function _qBuildTier() {
+      const picked = _qShuffle(_qALL_ENTRIES).slice(0, 3);
+      const correctMps = picked.map(e => e.mp);
+      const distractors = [...new Set(_qShuffle(_qALL_ENTRIES.filter(e => !correctMps.includes(e.mp))).map(e => e.mp))];
+      const pool = [...new Set(correctMps)];
+      for (const mp of distractors) { if (pool.length >= 8) break; if (!pool.includes(mp)) pool.push(mp); }
+      while (pool.length < 8) { const r = _qALL_ENTRIES[Math.floor(Math.random()*_qALL_ENTRIES.length)].mp; if (!pool.includes(r)) pool.push(r); }
+      _qTierQ = { pairs: picked, slots: [null,null,null], opts: _qShuffle(pool.slice(0,8)) };
+      _qTierSubmitted = false;
+    }
+
+    function _qRenderTier() {
+      if (!_qTierQ) _qBuildTier();
+      const q = _qTierQ;
+      // 备选战力值从大到小排序
+      const sortedOpts = [...q.opts].sort((a, b) => b - a);
+      let html = '<div class="quiz-card">';
+      html += '<div class="quiz-label">判断以下 3 组起手牌的绝对战力值</div>';
+      html += '<div class="quiz-pairs-row">';
+      for (let i = 0; i < 3; i++) {
+        const p = q.pairs[i];
+        html += `<div class="quiz-pair-card"><div class="quiz-pair-label">组合 ${i+1}</div><div class="quiz-pair-val">${p.a} · ${p.b}</div></div>`;
+      }
+      html += '</div>';
+      html += '<div class="quiz-slots-row">';
+      for (let i = 0; i < 3; i++) {
+        let cls = 'quiz-slot';
+        let val = q.slots[i] !== null ? q.slots[i] : '';
+        if (q.slots[i] !== null) cls += ' filled';
+        if (_qTierSubmitted) { const ok = q.slots[i] === q.pairs[i].mp; cls = cls.replace(' filled','') + (ok ? ' correct' : ' wrong'); }
+        html += `<div class="${cls}">${val}</div>`;
+      }
+      const clrDis = _qTierSubmitted ? 'disabled' : '';
+      html += `<button class="quiz-clear-btn" onclick="qTierClear()" ${clrDis}>清除</button></div>`;
+      html += '<div class="quiz-tier-opts">';
+      const usedC = {}; for (const s of q.slots) if (s!==null) usedC[s]=(usedC[s]||0)+1;
+      const availC = {}; for (const t of sortedOpts) availC[t]=(availC[t]||0)+1;
+      for (const t of sortedOpts) {
+        let cls = 'quiz-tier-opt';
+        if (!_qTierSubmitted && (usedC[t]||0) >= (availC[t]||1)) cls += ' used';
+        const onclick = _qTierSubmitted ? '' : `onclick="qTierPick(${t})"`;
+        html += `<button class="${cls}" ${onclick}>${t}</button>`;
+      }
+      html += '</div>';
+      html += `<div class="quiz-feedback" id="quiz-feedback"></div>`;
+      const filledAll = q.slots.every(s => s !== null);
+      const dis = (_qTierSubmitted || !filledAll) ? 'disabled' : '';
+      html += `<button class="quiz-submit-btn" onclick="qTierSubmit()" ${dis}>提交</button></div>`;
+      document.getElementById('quiz-area').innerHTML = html;
+    }
+
+    function qTierPick(val) {
+      if (_qTierSubmitted || _qPending) return;
+      const idx = _qTierQ.slots.indexOf(null);
+      if (idx === -1) return;
+      _qTierQ.slots[idx] = val;
+      _qRenderTier();
+    }
+
+    function qTierClear() {
+      if (_qTierSubmitted || _qPending) return;
+      for (let i = 2; i >= 0; i--) { if (_qTierQ.slots[i] !== null) { _qTierQ.slots[i] = null; break; } }
+      _qRenderTier();
+    }
+
+    function qTierSubmit() {
+      if (_qTierSubmitted || _qPending) return;
+      if (_qTierQ.slots.some(s => s === null)) return;
+      const isRight = _qTierQ.slots.every((s,i) => s === _qTierQ.pairs[i].mp);
+      _qTierSubmitted = true;
+      _qTotal++;
+      if (isRight) _qCorrect++;
+      _qUpdateScore();
+      _qRenderTier();
+      const fb = document.getElementById('quiz-feedback');
+      if (isRight) {
+        fb.textContent = '✓ 正确！'; fb.className = 'quiz-feedback ok';
+        _qPending = true;
+        setTimeout(() => { _qPending = false; _qNo++; _qBuildTier(); _qRenderTier(); _qUpdateScore(); }, 2000);
+      } else {
+        _qTierSubmitted = false;
+        _qTierQ.slots = [null,null,null];
+        _qRenderTier();
+        document.getElementById('quiz-feedback').textContent = '✗ 错误，重新填写';
+        document.getElementById('quiz-feedback').className = 'quiz-feedback err';
+      }
+    }
+
+    function _qNextQuestion() {
+      if (_qMode === 'mn') { _qBuildMn(); _qRenderMn(); }
+      else { _qBuildTier(); _qRenderTier(); }
+      _qUpdateScore();
+    }
+
+    function pct(n, d) {
+      return d === 0 ? '-' : (n / d * 100).toFixed(0) + '%';
+    }
+
+    function renderAnalysis(a) {
+      const body = document.getElementById('analysis-body');
+
+      let stakeRows = '';
+      const stakes = Object.keys(a.byStake).sort((x, y) => Number(x) - Number(y));
+      for (const s of stakes) {
+        const d = a.byStake[s];
+        stakeRows += `<div class="analysis-row">
+          <span class="analysis-label">$${s} 注</span>
+          <span class="analysis-value">${d.wins}/${d.total}</span>
+          <span class="analysis-pct ${d.wins/d.total >= 0.5 ? 'positive' : 'negative'}">${pct(d.wins, d.total)}</span>
+        </div>`;
+      }
+
+      let empRows = '';
+      for (const t of ['A', 'B', 'C']) {
+        const d = a.empOverall[t];
+        if (!d || d.total === 0) continue;
+        const wr = d.wins / d.total;
+        empRows += `<div class="analysis-row">
+          <span class="analysis-label">员工${t}</span>
+          <span class="analysis-value">${d.wins}/${d.total}</span>
+          <span class="analysis-pct ${wr >= 0.5 ? 'positive' : 'negative'}">${pct(d.wins, d.total)}</span>
+        </div>`;
+      }
+
+      body.innerHTML = `
+        <div class="analysis-section">
+          <div class="analysis-section-title">择时 vs 自然胜率</div>
+          <div class="analysis-row highlight-row">
+            <span class="analysis-label">观察者(择时)</span>
+            <span class="analysis-value">${a.betWins}/${a.betRounds}</span>
+            <span class="analysis-pct ${a.betWinRate >= 50 ? 'positive' : 'negative'}">${a.betRounds > 0 ? a.betWinRate.toFixed(0) + '%' : '-'}</span>
+          </div>
+          ${empRows || '<div class="analysis-row"><span class="analysis-label">无数据</span></div>'}
+        </div>
+
+        <div class="analysis-section">
+          <div class="analysis-section-title">其他</div>
+          <div class="analysis-row">
+            <span class="analysis-label">PASS率</span>
+            <span class="analysis-value">${a.passRate.toFixed(0)}% (${a.skipRounds}/${a.totalRounds})</span>
+          </div>
+          <div class="analysis-row">
+            <span class="analysis-label">净盈亏</span>
+            <span class="analysis-value ${a.netPnl >= 0 ? 'positive' : 'negative'}">${a.netPnl >= 0 ? '+' : ''}${a.netPnl}</span>
+          </div>
+          ${stakeRows ? `<div class="analysis-row" style="margin-top:4px"><span class="analysis-label" style="font-weight:600">注码胜率</span></div>${stakeRows}` : ''}
+        </div>
+
+        <div class="analysis-section">
+          <div class="analysis-section-title">PASS 分析 (${a.skipRounds}局)</div>
+          <div class="analysis-row">
+            <span class="analysis-label">老板全胜(0员工胜)</span>
+            <span class="analysis-value">${a.passBossAllWin}</span>
+            <span class="analysis-pct">${pct(a.passBossAllWin, a.skipRounds)}</span>
+          </div>
+          <div class="analysis-row">
+            <span class="analysis-label">1位员工胜</span>
+            <span class="analysis-value">${a.pass1EmpWin}</span>
+            <span class="analysis-pct">${pct(a.pass1EmpWin, a.skipRounds)}</span>
+          </div>
+          <div class="analysis-row">
+            <span class="analysis-label">2位员工胜</span>
+            <span class="analysis-value">${a.pass2EmpWin}</span>
+            <span class="analysis-pct">${pct(a.pass2EmpWin, a.skipRounds)}</span>
+          </div>
+          <div class="analysis-row">
+            <span class="analysis-label">3位员工全胜</span>
+            <span class="analysis-value">${a.pass3EmpWin}</span>
+            <span class="analysis-pct">${pct(a.pass3EmpWin, a.skipRounds)}</span>
+          </div>
+          <div class="analysis-row">
+            <span class="analysis-label">员工出10点(2x+)</span>
+            <span class="analysis-value">${a.passEmp10pts}</span>
+            <span class="analysis-pct">${a.skipRounds > 0 ? pct(a.passEmp10pts, a.skipRounds * 3) : '-'}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Init
+    // ═══════════════════════════════════════════════════════
+
+    showScreen('start-screen');
+    initUsername();
+  </script>
+</body>
+</html>
