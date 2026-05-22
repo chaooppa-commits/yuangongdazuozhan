@@ -120,7 +120,8 @@ function startGame(kellyMode, seedStr, buyin) {
   game.stats = {
     skip: 0, bet: 0, win: 0, lose: 0, totalStaked: 0,
     betTargetCount: { A: 0, B: 0, C: 0 },
-    stakeCount: {}
+    stakeCount: {},
+    flatEat: { obs: 0, A: 0, B: 0, C: 0 }
   };
   game.log = [];
   game.pnlHistory = [0];
@@ -197,6 +198,19 @@ function placeBet(target, amount) {
     if (game.currentBet.target !== 'SKIP') {
       if (observerPnl > 0) game.stats.win++;
       else game.stats.lose++;
+    }
+  
+    // 统计平吃：庄家平吃各玩家（分数相同或员工无斗口）
+    for (const lbl of ['A', 'B', 'C']) {
+      const er = settlement.employeeResults[lbl];
+      if (!er.won && er.reason &&
+          (er.reason.includes('点数相同') || er.reason === '员工无斗口')) {
+        game.stats.flatEat[lbl]++;
+        // 如果观察者押注了这个玩家，也计入 obs
+        if (game.currentBet.target === lbl) {
+          game.stats.flatEat.obs++;
+        }
+      }
     }
   
     // Track PnL
