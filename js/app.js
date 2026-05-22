@@ -105,12 +105,14 @@ function settle(hands, betTarget, betAmount) {
 // Game Flow
 // ═══════════════════════════════════════════════════════
 
-function startGame(kellyMode, seedStr) {
+function startGame(kellyMode, seedStr, buyin) {
+  const initialPurse = buyin || INITIAL_PURSE;
   game.kellyMode = kellyMode;
   game.seed = seedStr ? (parseInt(seedStr) || hashCode(seedStr)) : Math.floor(Date.now() / 1000);
   game.rng = mulberry32(game.seed);
-  game.obsPurse = INITIAL_PURSE;
-  game.bossPurse = INITIAL_PURSE;
+  game.obsPurse = initialPurse;
+  game.bossPurse = initialPurse;
+  game._initialPurse = initialPurse; // 记录本场带入金额
   game.roundNo = 0;
   game.phase = 'betting';
   game.hands = null;
@@ -128,7 +130,7 @@ function startGame(kellyMode, seedStr) {
   pushLog({
     type: 'session_start',
     seed: game.seed,
-    initialPurse: INITIAL_PURSE,
+    initialPurse: initialPurse,
     maxRounds: MAX_ROUNDS,
     kellyMode: game.kellyMode
   });
@@ -277,6 +279,7 @@ function endGame(reason) {
   });
 
   saveLogToStorage();
+  reportToSheets();
   renderEndScreen();
 }
 
@@ -308,6 +311,77 @@ function downloadLog() {
   a.download = `observer_session_seed${game.seed}.jsonl`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════
+// Google Sheets 数据上报
+// ═══════════════════════════════════════════════════════
+
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyxk9cNDaL86XQ53f70ANC1vwxO3Cael2LWiUW6ipjJXk3PyS2uYMn2cTNXQi8VzE6eqg/exec';
+
+function reportToSheets() {
+  try {
+    const buyin = game._initialPurse || INITIAL_PURSE;
+    const username = game._username || '匿名';
+    const netPnl = game.obsPurse - buyin;
+    const totalBet = game.stats.bet;
+    const winRate = totalBet > 0 ? +(game.stats.win / totalBet * 100).toFixed(1) : 0;
+    const roi = game.stats.totalStaked > 0
+      ? +(netPnl / game.stats.totalStaked * 100).toFixed(1)
+      : 0;
+
+    // 历史场次统计（localStorage 累计）
+    const histKey = `doukou_hist_${username}`;
+    let hist = JSON.parse(localStorage.getItem(histKey) || '{"totalSessions":0,"winSessions":0}');
+    hist.totalSessions += 1;
+    if (netPnl > 0) hist.winSessions += 1;
+    localStorage.setItem(histKey, JSON.stringify(hist));
+
+    const sessionWinRate = hist.totalSessions > 0
+      ? +(hist.winSessions / hist.totalSessions * 100).toFixed(1)
+      : 0;
+
+    const exitMap = {
+      'normal': '正常结束',
+      'observer_broke': '荷包打空',
+      'boss_broke': '老板打空',
+      'voluntary_run': '主动离场',
+      'interrupted': '中断'
+    };
+
+    const payload = {
+      timestamp: new Date().toISOString(),
+      username,
+      buyin,
+      // 历史场次统计
+      totalSessions: hist.totalSessions,
+      winSessions: hist.winSessions,
+      sessionWinRate,
+      // 本场局次统计
+      rounds: game.roundNo,
+      betRounds: game.stats.bet,
+      wins: game.stats.win,
+      winRate,
+      // 资金结果
+      finalPurse: game.obsPurse,
+      netPnl,
+      roi,
+      // 元数据
+      sessionResult: netPnl > 0 ? '赢场' : netPnl < 0 ? '输场' : '平场',
+      exitReason: exitMap[game.exitReason] || game.exitReason,
+      seed: game.seed
+    };
+
+    fetch(SHEETS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(err => console.warn('上报失败:', err));
+
+  } catch (err) {
+    console.warn('上报错误:', err);
+  }
 }
 
 // ═══════════════════════════════════════════════════════
