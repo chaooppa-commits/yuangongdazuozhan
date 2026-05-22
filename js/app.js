@@ -330,16 +330,24 @@ function reportToSheets() {
       ? +(netPnl / game.stats.totalStaked * 100).toFixed(1)
       : 0;
 
-    // 历史场次统计（localStorage 累计）
+    // localStorage 里累计历史数据（按用户名隔离）
     const histKey = `doukou_hist_${username}`;
-    let hist = JSON.parse(localStorage.getItem(histKey) || '{"totalSessions":0,"winSessions":0}');
+    let hist = JSON.parse(localStorage.getItem(histKey) || JSON.stringify({
+      totalSessions: 0, winSessions: 0,
+      totalRounds: 0, totalBetRounds: 0, totalWins: 0
+    }));
+
     hist.totalSessions += 1;
     if (netPnl > 0) hist.winSessions += 1;
+    hist.totalRounds = (hist.totalRounds || 0) + game.roundNo;
+    hist.totalBetRounds = (hist.totalBetRounds || 0) + game.stats.bet;
+    hist.totalWins = (hist.totalWins || 0) + game.stats.win;
     localStorage.setItem(histKey, JSON.stringify(hist));
 
     const sessionWinRate = hist.totalSessions > 0
-      ? +(hist.winSessions / hist.totalSessions * 100).toFixed(1)
-      : 0;
+      ? +(hist.winSessions / hist.totalSessions * 100).toFixed(1) : 0;
+    const totalWinRate = hist.totalBetRounds > 0
+      ? +(hist.totalWins / hist.totalBetRounds * 100).toFixed(1) : 0;
 
     const exitMap = {
       'normal': '正常结束',
@@ -357,12 +365,12 @@ function reportToSheets() {
       totalSessions: hist.totalSessions,
       winSessions: hist.winSessions,
       sessionWinRate,
-      // 本场局次统计
-      rounds: game.roundNo,
-      betRounds: game.stats.bet,
-      wins: game.stats.win,
-      winRate,
-      // 资金结果
+      // 累计局次统计
+      totalRounds: hist.totalRounds,
+      totalBetRounds: hist.totalBetRounds,
+      totalWins: hist.totalWins,
+      totalWinRate,
+      // 本场资金结果
       finalPurse: game.obsPurse,
       netPnl,
       roi,
