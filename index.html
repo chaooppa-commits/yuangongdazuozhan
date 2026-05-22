@@ -42,9 +42,9 @@
     <!-- Top bar -->
     <div class="top-bar">
       <div class="round-info">
-        <span class="ri-tag">ALL</span><span class="ri-val" id="round-num">0</span>
-        <span class="ri-tag">IN</span><span class="ri-val" id="round-in">0</span>
-        <span class="ri-tag">WIN</span><span class="ri-val" id="round-win">0</span>
+        <span class="ri-tag">ALL </span><span class="ri-val" id="round-num">0</span>
+        <span class="ri-tag">IN </span><span class="ri-val" id="round-in">0</span>
+        <span class="ri-tag">WIN </span><span class="ri-val" id="round-win">0</span>
       </div>
       <div class="purse-display">
         <div class="purse-item">
@@ -113,7 +113,7 @@
   <div class="modal-overlay" id="analysis-modal" onclick="closeAnalysis(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <h3>对局分析</h3>
+        <h3>分析</h3>
         <button class="modal-close" onclick="closeAnalysis()">&times;</button>
       </div>
       <div class="modal-body" id="analysis-body">
@@ -137,13 +137,13 @@
   <div class="modal-overlay" id="quiz-modal" onclick="closeQuiz(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <h3>战力记忆</h3>
+        <h3>战力训练</h3>
         <button class="modal-close" onclick="closeQuiz()">&times;</button>
       </div>
       <div class="modal-body" style="padding-bottom:24px">
         <div class="quiz-mode-tabs">
-          <button class="quiz-tab active" id="quiz-tab-mn" onclick="qSwitchMode('mn')">识别码模式</button>
-          <button class="quiz-tab" id="quiz-tab-tier" onclick="qSwitchMode('tier')">战力模式</button>
+          <button class="quiz-tab active" id="quiz-tab-mn" onclick="qSwitchMode('mn')">识别码</button>
+          <button class="quiz-tab" id="quiz-tab-tier" onclick="qSwitchMode('tier')">战力</button>
         </div>
         <div class="quiz-score-line" id="quiz-score-line">0 / 0 · 第 1 题</div>
         <div id="quiz-area"></div>
