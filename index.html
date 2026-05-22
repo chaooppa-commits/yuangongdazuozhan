@@ -42,11 +42,13 @@
     <!-- Top bar -->
     <div class="top-bar">
       <div class="round-info">
-        <span>第</span> <span class="round-num" id="round-num">1</span> <span>局</span>
+        <span class="ri-tag">ALL</span><span class="ri-val" id="round-num">0</span>
+        <span class="ri-tag">IN</span><span class="ri-val" id="round-in">0</span>
+        <span class="ri-tag">WIN</span><span class="ri-val" id="round-win">0</span>
       </div>
       <div class="purse-display">
         <div class="purse-item">
-          <div class="purse-label">狙击手</div>
+          <div class="purse-label">牛马</div>
           <div class="purse-value obs" id="obs-purse">$50</div>
           <div class="purse-bar"><div class="purse-bar-fill obs" id="obs-bar" style="width:50%"></div></div>
         </div>
@@ -89,8 +91,11 @@
 
   <!-- ═══════ End Screen ═══════ -->
   <div id="end-screen">
-    <h2 id="end-title">对决结束</h2>
-    <p class="end-subtitle" id="end-subtitle"></p>
+    <h2 id="end-title" style="display:none">对决结束</h2>
+    <p class="end-subtitle" id="end-subtitle" style="display:none"></p>
+    <div class="end-pnl-chart">
+      <canvas id="end-pnl-canvas"></canvas>
+    </div>
     <div class="stats-grid" id="stats-grid">
       <!-- Rendered dynamically -->
     </div>
@@ -100,7 +105,7 @@
     <div class="end-actions">
       <button class="end-btn secondary" onclick="downloadLog()">日志</button>
       <button class="end-btn secondary" onclick="showAnalysis()">分析</button>
-      <button class="end-btn primary" onclick="backToStart()">再来一局</button>
+      <button class="end-btn primary" onclick="backToStart()">再战</button>
     </div>
   </div>
 
@@ -121,7 +126,7 @@
   <div class="modal-overlay" id="tier-table-modal" onclick="closeTierTable(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <h3>战力表（p_eq等效胜率）</h3>
+        <h3>战力表</h3>
         <button class="modal-close" onclick="closeTierTable()">&times;</button>
       </div>
       <div class="modal-body" id="tier-table-body"></div>
@@ -132,7 +137,7 @@
   <div class="modal-overlay" id="quiz-modal" onclick="closeQuiz(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <h3>战力记忆训练</h3>
+        <h3>战力记忆</h3>
         <button class="modal-close" onclick="closeQuiz()">&times;</button>
       </div>
       <div class="modal-body" style="padding-bottom:24px">
@@ -345,6 +350,7 @@
       if (shadow.exited) return;
 
       const dec = shadowDecide(hands, shadow.purse, bossPurseForCap);
+      game._shadowLastDec = dec; // 保存当局决策以便写入日志
 
       if (dec.target === 'RUN') {
         shadow.exited = true;
@@ -448,9 +454,22 @@
         // 影子选手结算（用结算前的老板笹码限额：当前 bossPurse 已变，还原）
         const bossPurseBeforeSettle = game.bossPurse - settlement.bossPnl;
         shadowSettle(game.hands, settlement, bossPurseBeforeSettle);
+        // 把影子选手当局数据追加到最后一条 round log
+        const lastLog = game.log[game.log.length - 1];
+        if (lastLog && lastLog.type === 'round') {
+          const dec = game._shadowLastDec || {};
+          lastLog.shadow = {
+            target: dec.target || 'SKIP',
+            amount: dec.amount || 0,
+            purseAfter: shadow.purse,
+            exited: shadow.exited
+          };
+        }
       }
 
       document.getElementById('round-num').textContent = game.roundNo;
+      document.getElementById('round-in').textContent = game.stats.bet || 0;
+      document.getElementById('round-win').textContent = game.stats.win || 0;
       document.getElementById('obs-purse').textContent = `$${game.obsPurse}`;
       document.getElementById('boss-purse').textContent = `$${game.bossPurse}`;
 
@@ -522,16 +541,16 @@
         html += `<div class="${rowClass}"${clickAttr}>`;
         html += `<div class="player-label ${labelClasses[i]}">${labels[i]}</div>`;
         html += `<div class="cards-display">`;
-        html += `<div class="card visible">${v[0]}</div>`;
-        html += `<div class="card visible">${v[1]}</div>`;
+        html += `<div class="card visible"><span class="card-corner tl">${v[0]}</span><span class="card-center">${v[0]}</span><span class="card-corner br">${v[0]}</span></div>`;
+        html += `<div class="card visible"><span class="card-corner tl">${v[1]}</span><span class="card-center">${v[1]}</span><span class="card-corner br">${v[1]}</span></div>`;
 
         if (isRevealed) {
           for (let j = 2; j < 5; j++) {
-            html += `<div class="card revealed">${hand[j]}</div>`;
+            html += `<div class="card revealed"><span class="card-corner tl">${hand[j]}</span><span class="card-center">${hand[j]}</span><span class="card-corner br">${hand[j]}</span></div>`;
           }
         } else {
           for (let j = 2; j < 5; j++) {
-            html += `<div class="card hidden">?</div>`;
+            html += `<div class="card hidden"><span class="card-center">?</span></div>`;
           }
         }
         html += `</div>`;
@@ -752,24 +771,10 @@
 
     function renderEndScreen() {
       showScreen('end-screen');
+      // 渲染结束页面筹码曲线（需要等DOM可见后再画）
+      setTimeout(renderEndPnlChart, 50);
 
       const netPnl = game.obsPurse - INITIAL_PURSE;
-
-      document.getElementById('end-title').textContent =
-        netPnl > 0 ? '赢了!' : netPnl < 0 ? '输了...' : '平局';
-      document.getElementById('end-title').style.color =
-        netPnl > 0 ? 'var(--green)' : netPnl < 0 ? 'var(--accent)' : 'var(--text)';
-
-      const exitMap = {
-        'normal': '达到最大局数',
-        'observer_broke': '荷包打空',
-        'boss_broke': '老板打空!',
-        'voluntary_run': '主动下场',
-        'interrupted': '中断'
-      };
-
-      document.getElementById('end-subtitle').textContent =
-        `${exitMap[game.exitReason] || game.exitReason} | 种子: ${game.seed}`;
 
       const totalBet = game.stats.bet;
       const winRate = totalBet > 0 ? (game.stats.win / totalBet * 100).toFixed(0) : 0;
@@ -853,14 +858,16 @@
       const w = rect.width;
       const h = rect.height;
       const data = game.pnlHistory;
+      const shData = shadow.pnlHistory;
 
       if (data.length < 2) {
         ctx.clearRect(0, 0, w, h);
         return;
       }
 
-      const minVal = Math.min(...data, 0);
-      const maxVal = Math.max(...data, 0);
+      const allVals = [...data, ...shData, 0];
+      const minVal = Math.min(...allVals);
+      const maxVal = Math.max(...allVals);
       const range = Math.max(maxVal - minVal, 1);
 
       ctx.clearRect(0, 0, w, h);
@@ -875,6 +882,23 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
+      // Shadow curve (gray)
+      if (shData.length >= 2) {
+        ctx.strokeStyle = 'rgba(156,163,175,0.5)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        for (let i = 0; i < shData.length; i++) {
+          const x = (i / (shData.length - 1)) * w;
+          const y = h - ((shData[i] - minVal) / range) * (h - 8) - 4;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Player curve
       ctx.strokeStyle = data[data.length - 1] >= 0 ? '#10b981' : '#f43f5e';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -889,6 +913,74 @@
       const lastX = w;
       const lastY = h - ((data[data.length - 1] - minVal) / range) * (h - 8) - 4;
       ctx.lineTo(lastX, zeroY);
+      ctx.lineTo(0, zeroY);
+      ctx.closePath();
+      ctx.fillStyle = data[data.length - 1] >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)';
+      ctx.fill();
+    }
+
+    function renderEndPnlChart() {
+      const canvas = document.getElementById('end-pnl-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * 2;
+      canvas.height = rect.height * 2;
+      ctx.scale(2, 2);
+
+      const w = rect.width;
+      const h = rect.height;
+      const data = game.pnlHistory;
+      const shData = shadow.pnlHistory;
+
+      if (data.length < 2) return;
+
+      const allVals = [...data, ...shData, 0];
+      const minVal = Math.min(...allVals);
+      const maxVal = Math.max(...allVals);
+      const range = Math.max(maxVal - minVal, 1);
+
+      ctx.clearRect(0, 0, w, h);
+
+      const zeroY = h - ((0 - minVal) / range) * (h - 8) - 4;
+      ctx.strokeStyle = 'rgba(156,163,175,0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, zeroY);
+      ctx.lineTo(w, zeroY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Shadow curve
+      if (shData.length >= 2) {
+        ctx.strokeStyle = 'rgba(156,163,175,0.55)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        for (let i = 0; i < shData.length; i++) {
+          const x = (i / (shData.length - 1)) * w;
+          const y = h - ((shData[i] - minVal) / range) * (h - 8) - 4;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Player curve
+      ctx.strokeStyle = data[data.length - 1] >= 0 ? '#10b981' : '#f43f5e';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < data.length; i++) {
+        const x = (i / (data.length - 1)) * w;
+        const y = h - ((data[i] - minVal) / range) * (h - 8) - 4;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      ctx.lineTo(w, zeroY);
       ctx.lineTo(0, zeroY);
       ctx.closePath();
       ctx.fillStyle = data[data.length - 1] >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)';
