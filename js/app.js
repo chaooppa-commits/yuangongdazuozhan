@@ -317,7 +317,7 @@ function downloadLog() {
 // Google Sheets 数据上报
 // ═══════════════════════════════════════════════════════
 
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyxk9cNDaL86XQ53f70ANC1vwxO3Cael2LWiUW6ipjJXk3PyS2uYMn2cTNXQi8VzE6eqg/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxhlJ0AnZwUOlIxGEYoQyrZCGW_zJ8axOnmh_8_A5lLqjtdIV6JF08cWgJtCbPH-Pte/exec';
 
 function reportToSheets() {
   try {
@@ -325,15 +325,12 @@ function reportToSheets() {
     const username = game._username || '匿名';
     const netPnl = game.obsPurse - buyin;
     const totalBet = game.stats.bet;
-    const winRate = totalBet > 0 ? +(game.stats.win / totalBet * 100).toFixed(1) : 0;
     const roi = game.stats.totalStaked > 0
-      ? +(netPnl / game.stats.totalStaked * 100).toFixed(1)
-      : 0;
+      ? +(netPnl / game.stats.totalStaked * 100).toFixed(1) : 0;
 
-    // localStorage 里累计历史数据（按用户名隔离）
+    // localStorage 里累计历史数据
     const histKey = `doukou_hist_${username}`;
     let hist = JSON.parse(localStorage.getItem(histKey) || '{}');
-    // 兼容旧版本缺失字段
     hist.totalSessions  = (hist.totalSessions  || 0);
     hist.winSessions    = (hist.winSessions    || 0);
     hist.totalRounds    = (hist.totalRounds    || 0);
@@ -352,6 +349,10 @@ function reportToSheets() {
     const totalWinRate = hist.totalBetRounds > 0
       ? +(hist.totalWins / hist.totalBetRounds * 100).toFixed(1) : 0;
 
+    // 荷包结算：开场前荷包 - 带入 + 本场余额
+    const walletBefore = game._walletBefore || buyin;
+    const newWallet = walletBefore - buyin + game.obsPurse;
+
     const exitMap = {
       'normal': '正常结束',
       'observer_broke': '荷包打空',
@@ -361,9 +362,12 @@ function reportToSheets() {
     };
 
     const payload = {
+      action: 'endSession',
       timestamp: new Date().toISOString(),
       username,
+      pincode: game._pincode || '',
       buyin,
+      newWallet,         // 本场结算后的新荷包余额
       // 历史场次统计
       totalSessions: hist.totalSessions,
       winSessions: hist.winSessions,
@@ -385,7 +389,6 @@ function reportToSheets() {
 
     fetch(SHEETS_URL, {
       method: 'POST',
-      mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     }).catch(err => console.warn('上报失败:', err));
