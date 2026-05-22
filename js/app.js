@@ -332,16 +332,19 @@ function reportToSheets() {
 
     // localStorage 里累计历史数据（按用户名隔离）
     const histKey = `doukou_hist_${username}`;
-    let hist = JSON.parse(localStorage.getItem(histKey) || JSON.stringify({
-      totalSessions: 0, winSessions: 0,
-      totalRounds: 0, totalBetRounds: 0, totalWins: 0
-    }));
+    let hist = JSON.parse(localStorage.getItem(histKey) || '{}');
+    // 兼容旧版本缺失字段
+    hist.totalSessions  = (hist.totalSessions  || 0);
+    hist.winSessions    = (hist.winSessions    || 0);
+    hist.totalRounds    = (hist.totalRounds    || 0);
+    hist.totalBetRounds = (hist.totalBetRounds || 0);
+    hist.totalWins      = (hist.totalWins      || 0);
 
     hist.totalSessions += 1;
     if (netPnl > 0) hist.winSessions += 1;
-    hist.totalRounds = (hist.totalRounds || 0) + game.roundNo;
-    hist.totalBetRounds = (hist.totalBetRounds || 0) + game.stats.bet;
-    hist.totalWins = (hist.totalWins || 0) + game.stats.win;
+    hist.totalRounds    += game.roundNo;
+    hist.totalBetRounds += game.stats.bet;
+    hist.totalWins      += game.stats.win;
     localStorage.setItem(histKey, JSON.stringify(hist));
 
     const sessionWinRate = hist.totalSessions > 0
