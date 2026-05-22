@@ -136,6 +136,41 @@ html, body {
   border-color: var(--blue);
 }
 
+/* 荷包小字行 */
+.wallet-inline {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+.wallet-inline span {
+  font-weight: 700;
+  color: var(--blue);
+}
+/* 验证码提示 */
+.pincode-hint {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  opacity: 0.8;
+  min-height: 1em;
+}
+/* 开始页三分区 */
+.start-section {
+  width: 100%;
+  max-width: 340px;
+}
+.start-section + .start-section {
+  margin-top: 28px;
+}
+.start-section + .start-section:last-child {
+  margin-top: 36px;
+}
+.mode-btn.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .start-btn {
   width: 100%;
   max-width: 340px;
