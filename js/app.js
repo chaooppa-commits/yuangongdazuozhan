@@ -317,7 +317,7 @@ function downloadLog() {
 // Google Sheets 数据上报
 // ═══════════════════════════════════════════════════════
 
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxhlJ0AnZwUOlIxGEYoQyrZCGW_zJ8axOnmh_8_A5lLqjtdIV6JF08cWgJtCbPH-Pte/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyxk9cNDaL86XQ53f70ANC1vwxO3Cael2LWiUW6ipjJXk3PyS2uYMn2cTNXQi8VzE6eqg/exec';
 
 function reportToSheets() {
   try {
@@ -387,12 +387,13 @@ function reportToSheets() {
       seed: game.seed
     };
 
-    // Apps Script POST 不支持 CORS，必须加 no-cors；无法读返回值但写入成功
-    fetch(SHEETS_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    // 用 GET 请求 + no-cors 将数据写入 Apps Script，完全绕开 CORS 问题
+    const params = Object.keys(payload).map(k =>
+      encodeURIComponent(k) + '=' + encodeURIComponent(payload[k])
+    ).join('&');
+    fetch(SHEETS_URL + '?' + params, {
+      method: 'GET',
+      mode: 'no-cors'
     }).catch(err => console.warn('上报失败:', err));
 
   } catch (err) {
