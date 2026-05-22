@@ -5,21 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>牛马大作战</title>
+  <title>马喽大作战</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
   <!-- ═══════ Start Screen ═══════ -->
   <div id="start-screen">
-    <h1>牛马大作战</h1>
-    <p class="subtitle">牛马的皮鞑准备好了吗？</p>
+    <h1>马喽大作战</h1>
+    <p class="subtitle">马喽的皮鞭准备好了吗？</p>
       
     <!-- 区块1：用户身份 -->
     <div class="start-section">
       <div class="config-group">
         <input type="text" class="seed-input" id="username-input" placeholder="你的昵称" maxlength="12" oninput="onUsernameInput()">
-        <input type="text" class="seed-input" id="pincode-input" placeholder="验证码2–4位数字" maxlength="4" inputmode="numeric" oninput="onPincodeInput()" style="margin-top:16px" disabled>
+        <input type="text" class="seed-input" id="pincode-input" placeholder="4位密码" maxlength="4" inputmode="numeric" oninput="onPincodeInput()" style="margin-top:16px" disabled>
         <div class="wallet-inline" id="wallet-display">您的荷包：<span id="wallet-amount">--</span></div>
         <div class="pincode-hint" id="pincode-hint"></div>
       </div>
@@ -28,7 +28,7 @@
     <!-- 区块2：对战设定 -->
     <div class="start-section">
       <div class="config-group" id="buyin-group">
-        <label>带入金额</label>
+        <label>入场金额</label>
         <div class="mode-toggle">
           <button class="mode-btn active" data-buyin="50" onclick="selectBuyin(50, this)">$50</button>
           <button class="mode-btn" data-buyin="100" onclick="selectBuyin(100, this)">$100</button>
@@ -36,7 +36,7 @@
         </div>
       </div>
       <div class="config-group">
-        <label>如何侍候老板？</label>
+        <label>如何伺候老板？</label>
         <div class="mode-toggle">
           <button class="mode-btn active" data-mode="manual" onclick="selectMode('manual')">
             亲手服侍
@@ -54,7 +54,7 @@
     
     <!-- 区块3：进入按钮 -->
     <div class="start-section">
-      <button class="start-btn" onclick="onStart()">老板快过来</button>
+      <button class="start-btn" onclick="onStart()">老板来快活</button>
     </div>
   </div>
 
@@ -69,7 +69,7 @@
       </div>
       <div class="purse-display">
         <div class="purse-item">
-          <div class="purse-label">牛马</div>
+          <div class="purse-label">马喽</div>
           <div class="purse-value obs" id="obs-purse">$50</div>
           <div class="purse-bar"><div class="purse-bar-fill obs" id="obs-bar" style="width:50%"></div></div>
         </div>
@@ -269,12 +269,12 @@
           _walletBalance = null;
           if (data.exists) {
             _isNewUser = false;
-            amountEl.textContent = '请输入验证码';
-            hintEl.textContent = '老用户请输入验证码';
+            amountEl.textContent = '请输入密码';
+            hintEl.textContent = '老用户请输入密码';
           } else {
             _isNewUser = true;
             amountEl.textContent = '新用户';
-            hintEl.textContent = '设定一个2-4位验证码，点开始即注册（初始荷包 $300）';
+            hintEl.textContent = '设定一个4密码，点开始即注册（初始荷包 $300）';
           }
         })
         .catch(() => { amountEl.textContent = '查询失败'; pincodeEl.disabled = true; });
@@ -311,7 +311,7 @@
         .then(r => r.json())
         .then(data => {
           if (data.status === 'wrong_pin') {
-            amountEl.textContent = '验证码错误';
+            amountEl.textContent = '密码错误';
             hintEl.textContent = '不是您的账号？请注册新用户';
             _walletBalance = null;
             return;
@@ -376,8 +376,8 @@
       const pincode  = document.getElementById('pincode-input').value.trim();
 
       if (!username) { alert('请先输入昵称！'); return; }
-      if (pincode.length = 4) { alert('验证码4位数字！'); return; }
-      if (!/^\d+$/.test(pincode)) { alert('验证码只能是数字！'); return; }
+      if (pincode.length = 4) { alert('密码4位数字！'); return; }
+      if (!/^\d+$/.test(pincode)) { alert('密码只能是数字！'); return; }
 
       if (_walletBalance === null) {
         alert('荷包未就绪，请稍候再试！');
