@@ -280,7 +280,7 @@
           } else {
             _isNewUser = true;
             amountEl.textContent = '新用户';
-            hintEl.textContent = '设定一4位密码，点开始即注册（初始荷包 $300）';
+            hintEl.textContent = '设定一个4密码，点开始即注册（初始荷包 $300）';
           }
         })
         .catch(() => { amountEl.textContent = '查询失败'; pincodeEl.disabled = true; });
@@ -450,7 +450,7 @@
     // ═══════════════════════════════════════════════════════
     // Shadow Player (影子选手)
     // ═══════════════════════════════════════════════════════
-    const SHADOW_EXIT_THRESHOLD = 94; // 影子选手自成阈値
+    const SHADOW_EXIT_THRESHOLD = 6; // 影子退场阈値：庄家开局筹码 - 影子净胜筹码 <= 6 时退场
 
     const shadow = {
       purse: INITIAL_PURSE,
@@ -489,8 +489,11 @@
      * 返回 { target, amount } 或 { target: 'SKIP', amount: 0 }
      */
     function shadowDecide(hands, shadowPurse, bossPurse) {
-      // 影子选手检查退出阈値
-      if (shadowPurse >= SHADOW_EXIT_THRESHOLD) {
+      // 影子退场：庄家开局筹码 - 影子净胜筹码 <= 阈値
+      // 影子净胜 = shadowPurse - INITIAL_PURSE
+      // 退场条件：INITIAL_PURSE - (shadowPurse - INITIAL_PURSE) <= SHADOW_EXIT_THRESHOLD
+      const shadowNetWin = shadowPurse - INITIAL_PURSE;
+      if ((INITIAL_PURSE - shadowNetWin) <= SHADOW_EXIT_THRESHOLD) {
         return { target: 'RUN', amount: 0 };
       }
 
@@ -1012,6 +1015,11 @@
           <div class="stat-value">A${game.stats.betTargetCount.A} B${game.stats.betTargetCount.B} C${game.stats.betTargetCount.C}</div>
           <div class="stat-label">押注分布</div>
           <div class="stat-shadow">影子自动</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">A${game.stats.flatEat.A} B${game.stats.flatEat.B} C${game.stats.flatEat.C}</div>
+          <div class="stat-label">平吃 (平局/无斗口)</div>
+          <div class="stat-shadow">计入obs: ${game.stats.flatEat.obs}局</div>
         </div>
       `;
 
