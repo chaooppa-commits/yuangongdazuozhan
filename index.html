@@ -905,12 +905,14 @@
     function _qRenderMn() {
       if (!_qMnQ) _qBuildMn();
       const q = _qMnQ;
+      // 选项按组合号从小到大排序（a升序，a相同则b升序）
+      const sortedOpts = [...q.options].sort((x, y) => x.a !== y.a ? x.a - y.a : x.b - y.b);
       let html = '<div class="quiz-card">';
       html += '<div class="quiz-label">识别码（口诀）</div>';
       html += `<div class="quiz-mnemonic">${q.mn}</div>`;
       html += '<div class="quiz-label">选出所有属于该口诀的组合</div>';
       html += '<div class="quiz-options-grid">';
-      for (const entry of q.options) {
+      for (const entry of sortedOpts) {
         let cls = 'quiz-option';
         if (_qMnSubmitted) {
           const isC = q.correctKeys.has(entry.key);
@@ -976,6 +978,8 @@
     function _qRenderTier() {
       if (!_qTierQ) _qBuildTier();
       const q = _qTierQ;
+      // 备选战力值从大到小排序
+      const sortedOpts = [...q.opts].sort((a, b) => b - a);
       let html = '<div class="quiz-card">';
       html += '<div class="quiz-label">判断以下 3 组起手牌的绝对战力值</div>';
       html += '<div class="quiz-pairs-row">';
@@ -996,8 +1000,8 @@
       html += `<button class="quiz-clear-btn" onclick="qTierClear()" ${clrDis}>清除</button></div>`;
       html += '<div class="quiz-tier-opts">';
       const usedC = {}; for (const s of q.slots) if (s!==null) usedC[s]=(usedC[s]||0)+1;
-      const availC = {}; for (const t of q.opts) availC[t]=(availC[t]||0)+1;
-      for (const t of q.opts) {
+      const availC = {}; for (const t of sortedOpts) availC[t]=(availC[t]||0)+1;
+      for (const t of sortedOpts) {
         let cls = 'quiz-tier-opt';
         if (!_qTierSubmitted && (usedC[t]||0) >= (availC[t]||1)) cls += ' used';
         const onclick = _qTierSubmitted ? '' : `onclick="qTierPick(${t})"`;
