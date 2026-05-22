@@ -63,8 +63,9 @@
       <div class="pnl-chart">
         <canvas id="pnl-canvas"></canvas>
       </div>
-      <button class="tier-table-btn" onclick="showTierTable()" title="战力表">⚡表</button>
-      <button class="tier-table-btn" onclick="toggleTheme()" id="theme-btn" title="切换主题">🌙</button>
+      <button class="tier-table-btn" onclick="showQuiz()" title="战力记忆练习"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M754.5 573.1c-16.8-14.3-42.1-12.3-56.4 4.5l-76.4 89.6-25.8-30.5c-14.3-16.9-39.5-19-56.4-4.7s-19 39.5-4.7 56.4l32.7 38.6 2.5 2.1c14.1 12 32.5 18.6 51.7 18.6s37.6-6.6 51.7-18.6l2.5-2.1 83.1-97.5c14.3-16.8 12.3-42.1-4.5-56.4zM348.3 562.8c-51.2 0-92.8 41.6-92.8 92.8s41.6 92.8 92.8 92.8 92.8-41.6 92.8-92.8-41.6-92.8-92.8-92.8z m0 105.6c-7.1 0-12.8-5.8-12.8-12.8s5.8-12.8 12.8-12.8 12.8 5.8 12.8 12.8-5.7 12.8-12.8 12.8zM348.3 275.6c-51.2 0-92.8 41.6-92.8 92.8s41.6 92.8 92.8 92.8 92.8-41.6 92.8-92.8-41.6-92.8-92.8-92.8z m0 105.6c-7.1 0-12.8-5.8-12.8-12.8s5.8-12.8 12.8-12.8 12.8 5.8 12.8 12.8-5.7 12.8-12.8 12.8zM641.3 461.2c51.2 0 92.8-41.6 92.8-92.8s-41.6-92.8-92.8-92.8-92.8 41.6-92.8 92.8 41.6 92.8 92.8 92.8z m0-105.6c7.1 0 12.8 5.8 12.8 12.8s-5.8 12.8-12.8 12.8-12.8-5.8-12.8-12.8 5.7-12.8 12.8-12.8z"/><path d="M813.2 99.7H210.8c-81.6 0-148.1 66.4-148.1 148.1v528.5c0 81.6 66.4 148.1 148.1 148.1h602.5c81.6 0 148.1-66.4 148.1-148.1V247.8c-0.1-81.7-66.5-148.1-148.2-148.1z m63.5 676.5c0 35-28.5 63.5-63.5 63.5H210.8c-35 0-63.5-28.5-63.5-63.5V247.8c0-35 28.5-63.5 63.5-63.5h602.5c35 0 63.5 28.5 63.5 63.5v528.4z"/></svg></button>
+      <button class="tier-table-btn" onclick="showTierTable()" title="战力表"><svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M769.1 69H254.9C171.7 69 104 136.7 104 219.9v584.2c0 83.2 67.7 150.9 150.9 150.9h514.2c83.2 0 150.9-67.7 150.9-150.9V219.9C920 136.7 852.3 69 769.1 69zM840 804.1c0 39.1-31.8 70.9-70.9 70.9H254.9c-39.1 0-70.9-31.8-70.9-70.9V219.9c0-39.1 31.8-70.9 70.9-70.9h514.2c39.1 0 70.9 31.8 70.9 70.9v584.2z"/><path d="M577.2 334c-10.6-27-36.2-44.5-65.2-44.5S457.4 307 446.8 334L311.4 679.9c-8 20.6 2.1 43.8 22.7 51.8 4.8 1.9 9.7 2.8 14.6 2.8 16 0 31.1-9.7 37.3-25.4l48.5-123.8h155.2l48.5 123.8c8 20.6 31.3 30.7 51.8 22.7 20.6-8 30.7-31.3 22.7-51.8L577.2 334zM465.7 505.3L512 386.9l46.3 118.3h-92.6z"/></svg></button>
+      <button class="tier-table-btn" onclick="toggleTheme()" id="theme-btn" title="切换主题"><svg id="theme-icon-dark" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M919.6 319L746.4 120.8l-0.7-0.8c-15.9-17.3-38.9-25.3-61.7-21.5-23.3 3.9-43 19.6-52.7 42-19.6 45.1-64 72.1-118.8 72.1h-1.9c-55.2 0.8-98.5-25.1-118.9-71.4-9.8-22.3-29.6-37.8-52.8-41.7-22.7-3.8-45.7 4.3-61.6 21.5l-0.3 0.4L104.4 319C79 346.8 65.1 383.5 65.1 422.5c0 39.2 14.1 76.1 39.7 103.9l0.3 0.3c26.4 28.7 62.8 44.6 100.3 44.6 3 0 6.1-0.1 9.2-0.3v215.4c0 77.2 62.8 140 140 140h314c77.2 0 140-62.8 140-140V570.9c3.4 0.3 6.9 0.4 10.3 0.4 37.5 0 73.8-15.9 100.2-44.6l0.2-0.2c25.6-27.8 39.7-64.8 39.7-103.9-0.1-39.1-14-75.8-39.4-103.6z m-59.3 153.3l-0.2 0.2c-13.4 14.5-31.6 21.1-50 18.1-20.4-3.4-41.2 2.3-57 15.7-15.7 13.3-24.7 32.7-24.7 53.3v226.8c0 33.1-26.9 60-60 60h-314c-33.1 0-60-26.9-60-60V559.8c0-20.5-8.9-39.8-24.5-53.1-12.8-11-29-16.9-45.6-16.9-3.6 0-7.3 0.3-11 0.9-18.2 2.9-36.3-3.8-49.5-18.1l-0.3-0.3c-24.8-27-24.8-72.6 0-99.6l0.3-0.4 161.3-184.7c16 29.8 38.9 54.7 67.1 72.8 34.5 22 76.3 33.2 120.9 32.2h0.5c80.1-0.4 149.1-40.5 184-105.9l162 185.3 0.7 0.8c24.8 26.9 24.8 72.5 0 99.5z"/></svg><svg id="theme-icon-light" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" style="display:none"><circle cx="512" cy="512" r="480" fill="none" stroke="currentColor" stroke-width="60"/><path d="M919.6 319L746.4 120.8l-0.7-0.8c-15.9-17.3-38.9-25.3-61.7-21.5-23.3 3.9-43 19.6-52.7 42-19.6 45.1-64 72.1-118.8 72.1h-1.9c-55.2 0.8-98.5-25.1-118.9-71.4-9.8-22.3-29.6-37.8-52.8-41.7-22.7-3.8-45.7 4.3-61.6 21.5l-0.3 0.4L104.4 319C79 346.8 65.1 383.5 65.1 422.5c0 39.2 14.1 76.1 39.7 103.9l0.3 0.3c26.4 28.7 62.8 44.6 100.3 44.6 3 0 6.1-0.1 9.2-0.3v215.4c0 77.2 62.8 140 140 140h314c77.2 0 140-62.8 140-140V570.9c3.4 0.3 6.9 0.4 10.3 0.4 37.5 0 73.8-15.9 100.2-44.6l0.2-0.2c25.6-27.8 39.7-64.8 39.7-103.9-0.1-39.1-14-75.8-39.4-103.6z m-59.3 153.3l-0.2 0.2c-13.4 14.5-31.6 21.1-50 18.1-20.4-3.4-41.2 2.3-57 15.7-15.7 13.3-24.7 32.7-24.7 53.3v226.8c0 33.1-26.9 60-60 60h-314c-33.1 0-60-26.9-60-60V559.8c0-20.5-8.9-39.8-24.5-53.1-12.8-11-29-16.9-45.6-16.9-3.6 0-7.3 0.3-11 0.9-18.2 2.9-36.3-3.8-49.5-18.1l-0.3-0.3c-24.8-27-24.8-72.6 0-99.6l0.3-0.4 161.3-184.7c16 29.8 38.9 54.7 67.1 72.8 34.5 22 76.3 33.2 120.9 32.2h0.5c80.1-0.4 149.1-40.5 184-105.9l162 185.3 0.7 0.8c24.8 26.9 24.8 72.5 0 99.5z"/></svg></button>
     </div>
 
     <!-- Card table -->
@@ -124,6 +125,24 @@
         <button class="modal-close" onclick="closeTierTable()">&times;</button>
       </div>
       <div class="modal-body" id="tier-table-body"></div>
+    </div>
+  </div>
+
+  <!-- ═══════ Quiz Modal ═══════ -->
+  <div class="modal-overlay" id="quiz-modal" onclick="closeQuiz(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>战力记忆训练</h3>
+        <button class="modal-close" onclick="closeQuiz()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding-bottom:24px">
+        <div class="quiz-mode-tabs">
+          <button class="quiz-tab active" id="quiz-tab-mn" onclick="qSwitchMode('mn')">识别码模式</button>
+          <button class="quiz-tab" id="quiz-tab-tier" onclick="qSwitchMode('tier')">战力模式</button>
+        </div>
+        <div class="quiz-score-line" id="quiz-score-line">0 / 0 · 第 1 题</div>
+        <div id="quiz-area"></div>
+      </div>
     </div>
   </div>
 
@@ -220,7 +239,8 @@
       tap();
       _isDark = !_isDark;
       document.documentElement.setAttribute('data-theme', _isDark ? 'dark' : 'light');
-      document.getElementById('theme-btn').textContent = _isDark ? '🌙' : '☀️';
+      document.getElementById('theme-icon-dark').style.display = _isDark ? '' : 'none';
+      document.getElementById('theme-icon-light').style.display = _isDark ? 'none' : '';
     }
 
     // ═══════════════════════════════════════════════════════
@@ -814,6 +834,226 @@
     function closeTierTable(e) {
       if (e && e.target !== e.currentTarget) return;
       document.getElementById('tier-table-modal').classList.remove('show');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Quiz Modal
+    // ═══════════════════════════════════════════════════════
+    const _qALL_ENTRIES = Object.entries(CORRECTED_TABLE).map(([key, v]) => {
+      const [a, b] = key.split(',').map(Number);
+      return { a, b, key, tier: Math.floor(v.tier), mn: v.mn, mp: v.mp };
+    });
+    const _qALL_MN = [...new Set(_qALL_ENTRIES.map(e => e.mn))];
+
+    let _qMode = 'mn';
+    let _qCorrect = 0;
+    let _qTotal = 0;
+    let _qNo = 1;
+    let _qPending = false;
+    let _qMnQ = null;
+    let _qMnSelected = new Set();
+    let _qMnSubmitted = false;
+    let _qTierQ = null;
+    let _qTierSubmitted = false;
+
+    function _qShuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function _qUpdateScore() {
+      document.getElementById('quiz-score-line').textContent =
+        `${_qCorrect} / ${_qTotal} · 第 ${_qNo} 题`;
+    }
+
+    function showQuiz() {
+      tap();
+      document.getElementById('quiz-modal').classList.add('show');
+      if (!_qMnQ && !_qTierQ) _qNextQuestion();
+    }
+
+    function closeQuiz(e) {
+      if (e && e.target !== e.currentTarget) return;
+      tap();
+      document.getElementById('quiz-modal').classList.remove('show');
+    }
+
+    function qSwitchMode(mode) {
+      tap();
+      _qMode = mode;
+      _qPending = false;
+      document.getElementById('quiz-tab-mn').classList.toggle('active', mode === 'mn');
+      document.getElementById('quiz-tab-tier').classList.toggle('active', mode === 'tier');
+      _qNextQuestion();
+    }
+
+    // ――― 识别码模式 ―――
+    function _qBuildMn() {
+      const mn = _qALL_MN[Math.floor(Math.random() * _qALL_MN.length)];
+      const correctEntries = _qALL_ENTRIES.filter(e => e.mn === mn);
+      const correctKeys = new Set(correctEntries.map(e => e.key));
+      const distractors = _qShuffle(_qALL_ENTRIES.filter(e => !correctKeys.has(e.key)));
+      const needed = Math.max(0, 8 - correctEntries.length);
+      const optionPool = _qShuffle([...correctEntries, ...distractors.slice(0, needed)]);
+      _qMnQ = { mn, correctKeys, options: optionPool };
+      _qMnSelected = new Set();
+      _qMnSubmitted = false;
+    }
+
+    function _qRenderMn() {
+      if (!_qMnQ) _qBuildMn();
+      const q = _qMnQ;
+      let html = '<div class="quiz-card">';
+      html += '<div class="quiz-label">识别码（口诀）</div>';
+      html += `<div class="quiz-mnemonic">${q.mn}</div>`;
+      html += '<div class="quiz-label">选出所有属于该口诀的组合</div>';
+      html += '<div class="quiz-options-grid">';
+      for (const entry of q.options) {
+        let cls = 'quiz-option';
+        if (_qMnSubmitted) {
+          const isC = q.correctKeys.has(entry.key);
+          const isSel = _qMnSelected.has(entry.key);
+          if (isC) cls += ' correct';
+          else if (isSel) cls += ' wrong';
+        } else if (_qMnSelected.has(entry.key)) cls += ' selected';
+        const label = `${entry.a}-${entry.b}`;
+        const onclick = _qMnSubmitted ? '' : `onclick="qMnToggle('${entry.key}')"` ;
+        html += `<button class="${cls}" ${onclick}><span class="opt-pair">${label}</span><span class="opt-mp">${entry.mp}</span></button>`;
+      }
+      html += '</div>';
+      html += `<div class="quiz-feedback" id="quiz-feedback"></div>`;
+      const disabled = _qMnSubmitted ? 'disabled' : '';
+      html += `<button class="quiz-submit-btn" onclick="qMnSubmit()" ${disabled}>提交</button>`;
+      html += '</div>';
+      document.getElementById('quiz-area').innerHTML = html;
+    }
+
+    function qMnToggle(key) {
+      if (_qMnSubmitted || _qPending) return;
+      if (_qMnSelected.has(key)) _qMnSelected.delete(key);
+      else _qMnSelected.add(key);
+      _qRenderMn();
+    }
+
+    function qMnSubmit() {
+      if (_qMnSubmitted || _qPending) return;
+      const q = _qMnQ;
+      const selArr = [..._qMnSelected].sort();
+      const corArr = [...q.correctKeys].sort();
+      const isRight = selArr.length === corArr.length && selArr.every((k,i) => k === corArr[i]);
+      _qMnSubmitted = true;
+      _qTotal++;
+      if (isRight) _qCorrect++;
+      _qUpdateScore();
+      _qRenderMn();
+      const fb = document.getElementById('quiz-feedback');
+      if (isRight) {
+        fb.textContent = '✓ 正确！'; fb.className = 'quiz-feedback ok';
+        _qPending = true;
+        setTimeout(() => { _qPending = false; _qNo++; _qBuildMn(); _qRenderMn(); _qUpdateScore(); }, 2000);
+      } else {
+        _qMnSubmitted = false;
+        _qRenderMn();
+        document.getElementById('quiz-feedback').textContent = '✗ 错误，继续选择正确答案';
+        document.getElementById('quiz-feedback').className = 'quiz-feedback err';
+      }
+    }
+
+    // ――― 战力模式 ―――
+    function _qBuildTier() {
+      const picked = _qShuffle(_qALL_ENTRIES).slice(0, 3);
+      const correctMps = picked.map(e => e.mp);
+      const distractors = [...new Set(_qShuffle(_qALL_ENTRIES.filter(e => !correctMps.includes(e.mp))).map(e => e.mp))];
+      const pool = [...new Set(correctMps)];
+      for (const mp of distractors) { if (pool.length >= 8) break; if (!pool.includes(mp)) pool.push(mp); }
+      while (pool.length < 8) { const r = _qALL_ENTRIES[Math.floor(Math.random()*_qALL_ENTRIES.length)].mp; if (!pool.includes(r)) pool.push(r); }
+      _qTierQ = { pairs: picked, slots: [null,null,null], opts: _qShuffle(pool.slice(0,8)) };
+      _qTierSubmitted = false;
+    }
+
+    function _qRenderTier() {
+      if (!_qTierQ) _qBuildTier();
+      const q = _qTierQ;
+      let html = '<div class="quiz-card">';
+      html += '<div class="quiz-label">判断以下 3 组起手牌的绝对战力值</div>';
+      html += '<div class="quiz-pairs-row">';
+      for (let i = 0; i < 3; i++) {
+        const p = q.pairs[i];
+        html += `<div class="quiz-pair-card"><div class="quiz-pair-label">组合 ${i+1}</div><div class="quiz-pair-val">${p.a} · ${p.b}</div></div>`;
+      }
+      html += '</div>';
+      html += '<div class="quiz-slots-row">';
+      for (let i = 0; i < 3; i++) {
+        let cls = 'quiz-slot';
+        let val = q.slots[i] !== null ? q.slots[i] : '';
+        if (q.slots[i] !== null) cls += ' filled';
+        if (_qTierSubmitted) { const ok = q.slots[i] === q.pairs[i].mp; cls = cls.replace(' filled','') + (ok ? ' correct' : ' wrong'); }
+        html += `<div class="${cls}">${val}</div>`;
+      }
+      const clrDis = _qTierSubmitted ? 'disabled' : '';
+      html += `<button class="quiz-clear-btn" onclick="qTierClear()" ${clrDis}>清除</button></div>`;
+      html += '<div class="quiz-tier-opts">';
+      const usedC = {}; for (const s of q.slots) if (s!==null) usedC[s]=(usedC[s]||0)+1;
+      const availC = {}; for (const t of q.opts) availC[t]=(availC[t]||0)+1;
+      for (const t of q.opts) {
+        let cls = 'quiz-tier-opt';
+        if (!_qTierSubmitted && (usedC[t]||0) >= (availC[t]||1)) cls += ' used';
+        const onclick = _qTierSubmitted ? '' : `onclick="qTierPick(${t})"`;
+        html += `<button class="${cls}" ${onclick}>${t}</button>`;
+      }
+      html += '</div>';
+      html += `<div class="quiz-feedback" id="quiz-feedback"></div>`;
+      const filledAll = q.slots.every(s => s !== null);
+      const dis = (_qTierSubmitted || !filledAll) ? 'disabled' : '';
+      html += `<button class="quiz-submit-btn" onclick="qTierSubmit()" ${dis}>提交</button></div>`;
+      document.getElementById('quiz-area').innerHTML = html;
+    }
+
+    function qTierPick(val) {
+      if (_qTierSubmitted || _qPending) return;
+      const idx = _qTierQ.slots.indexOf(null);
+      if (idx === -1) return;
+      _qTierQ.slots[idx] = val;
+      _qRenderTier();
+    }
+
+    function qTierClear() {
+      if (_qTierSubmitted || _qPending) return;
+      for (let i = 2; i >= 0; i--) { if (_qTierQ.slots[i] !== null) { _qTierQ.slots[i] = null; break; } }
+      _qRenderTier();
+    }
+
+    function qTierSubmit() {
+      if (_qTierSubmitted || _qPending) return;
+      if (_qTierQ.slots.some(s => s === null)) return;
+      const isRight = _qTierQ.slots.every((s,i) => s === _qTierQ.pairs[i].mp);
+      _qTierSubmitted = true;
+      _qTotal++;
+      if (isRight) _qCorrect++;
+      _qUpdateScore();
+      _qRenderTier();
+      const fb = document.getElementById('quiz-feedback');
+      if (isRight) {
+        fb.textContent = '✓ 正确！'; fb.className = 'quiz-feedback ok';
+        _qPending = true;
+        setTimeout(() => { _qPending = false; _qNo++; _qBuildTier(); _qRenderTier(); _qUpdateScore(); }, 2000);
+      } else {
+        _qTierSubmitted = false;
+        _qTierQ.slots = [null,null,null];
+        _qRenderTier();
+        document.getElementById('quiz-feedback').textContent = '✗ 错误，重新填写';
+        document.getElementById('quiz-feedback').className = 'quiz-feedback err';
+      }
+    }
+
+    function _qNextQuestion() {
+      if (_qMode === 'mn') { _qBuildMn(); _qRenderMn(); }
+      else { _qBuildTier(); _qRenderTier(); }
+      _qUpdateScore();
     }
 
     function pct(n, d) {
