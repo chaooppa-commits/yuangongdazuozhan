@@ -387,8 +387,10 @@ function reportToSheets() {
       seed: game.seed
     };
 
+    // Apps Script POST 不支持 CORS，必须加 no-cors；无法读返回值但写入成功
     fetch(SHEETS_URL, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     }).catch(err => console.warn('上报失败:', err));
