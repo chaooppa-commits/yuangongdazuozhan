@@ -387,14 +387,14 @@ function reportToSheets() {
       seed: game.seed
     };
 
-    // 用 GET 请求 + no-cors 将数据写入 Apps Script，完全绕开 CORS 问题
+    // GET 请求，Apps Script doGet 天然支持跨域，直接发送即可
     const params = Object.keys(payload).map(k =>
       encodeURIComponent(k) + '=' + encodeURIComponent(payload[k])
     ).join('&');
-    fetch(SHEETS_URL + '?' + params, {
-      method: 'GET',
-      mode: 'no-cors'
-    }).catch(err => console.warn('上报失败:', err));
+    fetch(SHEETS_URL + '?' + params)
+      .then(r => r.json())
+      .then(d => console.log('上报成功:', d))
+      .catch(err => console.warn('上报失败:', err));
 
   } catch (err) {
     console.warn('上报错误:', err);
