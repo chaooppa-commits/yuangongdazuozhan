@@ -257,7 +257,8 @@
       _walletTimer = setTimeout(() => checkUsername(username), 600);
     }
 
-    function checkUsername(username) {
+    // keepPin=true 时保留已有验证码并直接触发验证（回到首屏时用）
+    function checkUsername(username, keepPin) {
       const amountEl  = document.getElementById('wallet-amount');
       const pincodeEl = document.getElementById('pincode-input');
       const hintEl    = document.getElementById('pincode-hint');
@@ -265,16 +266,21 @@
         .then(r => r.json())
         .then(data => {
           pincodeEl.disabled = false;
-          pincodeEl.value = '';
+          if (!keepPin) pincodeEl.value = '';
           _walletBalance = null;
           if (data.exists) {
             _isNewUser = false;
-            amountEl.textContent = '请输入密码';
-            hintEl.textContent = '老用户请输入密码';
+            if (keepPin) {
+              // 直接用已有密码进行验证
+              onPincodeInput();
+            } else {
+              amountEl.textContent = '请输入密码';
+              hintEl.textContent = '老用户请输入密码';
+            }
           } else {
             _isNewUser = true;
             amountEl.textContent = '新用户';
-            hintEl.textContent = '设定一个4密码，点开始即注册（初始荷包 $300）';
+            hintEl.textContent = '设定一4位密码，点开始即注册（初始荷包 $300）';
           }
         })
         .catch(() => { amountEl.textContent = '查询失败'; pincodeEl.disabled = true; });
@@ -417,14 +423,10 @@
 
     function backToStart() {
       showScreen('start-screen');
-      // 昵称有就自动刷新荷包
+      // 保留昵称和密码，直接重新验证荷包
       const username = document.getElementById('username-input').value.trim();
-      const pincode  = document.getElementById('pincode-input').value.trim();
       if (username) {
-        checkUsername(username);
-        if (pincode.length >= 2) {
-          setTimeout(() => onPincodeInput(), 700);
-        }
+        checkUsername(username, true);  // keepPin=true 保留密码并自动验证
       }
     }
 
