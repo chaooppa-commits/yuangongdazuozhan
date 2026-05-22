@@ -14,39 +14,48 @@
   <div id="start-screen">
     <h1>牛马大作战</h1>
     <p class="subtitle">牛马的皮鞑准备好了吗？</p>
-  
-    <div class="config-group">
-      <input type="text" class="seed-input" id="username-input" placeholder="你的昵称" maxlength="12" oninput="onIdentityInput()">
-      <input type="text" class="seed-input" id="pincode-input" placeholder="设定2-4位身份验证码，用于验证账户" maxlength="4" inputmode="numeric" oninput="onIdentityInput()" style="margin-top:8px">
-      <div class="wallet-inline" id="wallet-display">您的荷包：<span id="wallet-amount">--</span></div>
-    </div>
-  
-    <div class="config-group" id="buyin-group">
-      <label>带入金额</label>
-      <div class="mode-toggle">
-        <button class="mode-btn active" data-buyin="50" onclick="selectBuyin(50, this)">$50</button>
-        <button class="mode-btn" data-buyin="100" onclick="selectBuyin(100, this)">$100</button>
-        <button class="mode-btn" data-buyin="200" onclick="selectBuyin(200, this)">$200</button>
+      
+    <!-- 区块1：用户身份 -->
+    <div class="start-section">
+      <div class="config-group">
+        <input type="text" class="seed-input" id="username-input" placeholder="你的昵称" maxlength="12" oninput="onUsernameInput()">
+        <input type="text" class="seed-input" id="pincode-input" placeholder="验证码2–4位数字" maxlength="4" inputmode="numeric" oninput="onPincodeInput()" style="margin-top:16px" disabled>
+        <div class="wallet-inline" id="wallet-display">您的荷包：<span id="wallet-amount">--</span></div>
+        <div class="pincode-hint" id="pincode-hint"></div>
       </div>
     </div>
-  
-    <div class="config-group">
-      <label>如何侍候老板？</label>
-      <div class="mode-toggle">
-        <button class="mode-btn active" data-mode="manual" onclick="selectMode('manual')">
-          亲手服侍
-          <div class="mode-desc">4/8/12/16</div>
-        </button>
-        <button class="mode-btn" data-mode="kelly" onclick="selectMode('kelly')">
-          懒得动手
-          <div class="mode-desc">1/2 Kelly</div>
-        </button>
+      
+    <!-- 区块2：对战设定 -->
+    <div class="start-section">
+      <div class="config-group" id="buyin-group">
+        <label>带入金额</label>
+        <div class="mode-toggle">
+          <button class="mode-btn active" data-buyin="50" onclick="selectBuyin(50, this)">$50</button>
+          <button class="mode-btn" data-buyin="100" onclick="selectBuyin(100, this)">$100</button>
+          <button class="mode-btn" data-buyin="200" onclick="selectBuyin(200, this)">$200</button>
+        </div>
+      </div>
+      <div class="config-group">
+        <label>如何侍候老板？</label>
+        <div class="mode-toggle">
+          <button class="mode-btn active" data-mode="manual" onclick="selectMode('manual')">
+            亲手服侍
+            <div class="mode-desc">4/8/12/16</div>
+          </button>
+          <button class="mode-btn" data-mode="kelly" onclick="selectMode('kelly')">
+            懒得动手
+            <div class="mode-desc">1/2 Kelly</div>
+          </button>
+        </div>
       </div>
     </div>
-
+    
     <input type="hidden" id="seed-input" value="">
-
-    <button class="start-btn" onclick="onStart()">老板快过来</button>
+    
+    <!-- 区块3：进入按钮 -->
+    <div class="start-section">
+      <button class="start-btn" onclick="onStart()">老板快过来</button>
+    </div>
   </div>
 
   <!-- ═══════ Game Screen ═══════ -->
@@ -214,11 +223,12 @@
       document.removeEventListener('click', unlockAudio);
     }, { once: true });
 
-    // 带入金额选择
-    let selectedBuyin = 50;
-    let _walletBalance = null;   // 从数据库读到的荷包余额
-    let _walletTimer = null;     // 检索节流计时器
-    const WALLET_MIN = 50;       // 荷包最小进场门槛
+    // ─── 钱包 / 身份状态 ───────────────────────────────────────
+    let selectedBuyin  = 50;
+    let _walletBalance = null;   // 查询到的荷包余额
+    let _walletTimer   = null;   // 节流计时器
+    let _isNewUser     = false;  // true=新用户（尚未注册）
+    const WALLET_MIN   = 50;     // 最低进场门槛
 
     function selectBuyin(amount, btn) {
       tap();
@@ -227,35 +237,88 @@
       btn.classList.add('active');
     }
 
-    // 昵称或验证码变化时触发节流查询
-    function onIdentityInput() {
+    // 步骤1: 输入昵称 -> 检查账号是否存在
+    function onUsernameInput() {
       clearTimeout(_walletTimer);
-      const username = document.getElementById('username-input').value.trim();
-      const pincode  = document.getElementById('pincode-input').value.trim();
-      // 两者都有值才查询
-      if (username && pincode.length >= 2) {
-        _walletTimer = setTimeout(() => fetchWallet(username, pincode), 600);
-      } else {
-        document.getElementById('wallet-amount').textContent = '--';
+      const username  = document.getElementById('username-input').value.trim();
+      const amountEl  = document.getElementById('wallet-amount');
+      const pincodeEl = document.getElementById('pincode-input');
+      const hintEl    = document.getElementById('pincode-hint');
+      if (!username) {
+        amountEl.textContent = '--';
+        pincodeEl.disabled = true;
+        pincodeEl.value = '';
+        hintEl.textContent = '';
         _walletBalance = null;
+        _isNewUser = false;
+        return;
+      }
+      amountEl.textContent = '查询中...';
+      _walletTimer = setTimeout(() => checkUsername(username), 600);
+    }
+
+    function checkUsername(username) {
+      const amountEl  = document.getElementById('wallet-amount');
+      const pincodeEl = document.getElementById('pincode-input');
+      const hintEl    = document.getElementById('pincode-hint');
+      fetch(SHEETS_URL + '?action=checkUsername&username=' + encodeURIComponent(username))
+        .then(r => r.json())
+        .then(data => {
+          pincodeEl.disabled = false;
+          pincodeEl.value = '';
+          _walletBalance = null;
+          if (data.exists) {
+            _isNewUser = false;
+            amountEl.textContent = '请输入验证码';
+            hintEl.textContent = '老用户请输入验证码';
+          } else {
+            _isNewUser = true;
+            amountEl.textContent = '新用户';
+            hintEl.textContent = '设定一个2-4位验证码，点开始即注册（初始荷包 $300）';
+          }
+        })
+        .catch(() => { amountEl.textContent = '查询失败'; pincodeEl.disabled = true; });
+    }
+
+    // 步骤2: 输入验证码
+    function onPincodeInput() {
+      clearTimeout(_walletTimer);
+      const username  = document.getElementById('username-input').value.trim();
+      const pincode   = document.getElementById('pincode-input').value.trim();
+      const amountEl  = document.getElementById('wallet-amount');
+      const hintEl    = document.getElementById('pincode-hint');
+      if (!pincode || pincode.length < 2) {
+        if (!_isNewUser) _walletBalance = null;
+        return;
+      }
+      if (_isNewUser) {
+        _walletBalance = 300;
+        amountEl.textContent = '$300（初始荷包）';
+        hintEl.textContent = '点“开始”完成注册并进入游戏';
+        updateBuyinButtons(300);
+      } else {
+        _walletTimer = setTimeout(() => fetchWallet(username, pincode), 600);
       }
     }
 
-    // 向 Apps Script 查询荷包
+    // 老用户: 验证 pincode 并取荷包
     function fetchWallet(username, pincode) {
       const amountEl = document.getElementById('wallet-amount');
-      amountEl.textContent = '查询中…';
+      const hintEl   = document.getElementById('pincode-hint');
+      amountEl.textContent = '验证中...';
 
-      fetch(`${SHEETS_URL}?action=getWallet&username=${encodeURIComponent(username)}&pincode=${encodeURIComponent(pincode)}`)
+      fetch(SHEETS_URL + '?action=getWallet&username=' + encodeURIComponent(username) + '&pincode=' + encodeURIComponent(pincode))
         .then(r => r.json())
         .then(data => {
           if (data.status === 'wrong_pin') {
             amountEl.textContent = '验证码错误';
+            hintEl.textContent = '不是您的账号？请注册新用户';
             _walletBalance = null;
             return;
           }
           _walletBalance = data.wallet;
-          amountEl.textContent = `$${_walletBalance}`;
+          amountEl.textContent = '$' + _walletBalance;
+          hintEl.textContent = '';
           updateBuyinButtons(_walletBalance);
         })
         .catch(() => {
@@ -282,13 +345,20 @@
       }
     }
 
-    // 应用初始化：恢复昵称和验证码并自动查询
+    // 初始化：恢复昵称和验证码并自动查询
     function initUsername() {
       const savedName = localStorage.getItem('doukou_username');
       const savedPin  = localStorage.getItem('doukou_pincode');
-      if (savedName) document.getElementById('username-input').value = savedName;
-      if (savedPin)  document.getElementById('pincode-input').value  = savedPin;
-      if (savedName && savedPin) fetchWallet(savedName, savedPin);
+      if (savedName) {
+        document.getElementById('username-input').value = savedName;
+        checkUsername(savedName);
+        if (savedPin) {
+          setTimeout(() => {
+            document.getElementById('pincode-input').value = savedPin;
+            onPincodeInput();
+          }, 800);
+        }
+      }
     }
 
     function selectMode(mode) {
@@ -306,15 +376,15 @@
       const pincode  = document.getElementById('pincode-input').value.trim();
 
       if (!username) { alert('请先输入昵称！'); return; }
-      if (pincode.length < 2) { alert('验证码至少 2 位数字！'); return; }
+      if (pincode.length = 4) { alert('验证码4位数字！'); return; }
       if (!/^\d+$/.test(pincode)) { alert('验证码只能是数字！'); return; }
 
       if (_walletBalance === null) {
-        alert('荷包查询中，请稍候再试！');
+        alert('荷包未就绪，请稍候再试！');
         return;
       }
       if (_walletBalance < selectedBuyin) {
-        alert(`荷包不足！当前荷包 $${_walletBalance}，无法带入 $${selectedBuyin}`);
+        alert('荷包不足！当前荷包 $' + _walletBalance + '，无法带入 $' + selectedBuyin);
         return;
       }
 
@@ -347,10 +417,15 @@
 
     function backToStart() {
       showScreen('start-screen');
-      // 昵称和验证码都有时自动刷新荷包
+      // 昵称有就自动刷新荷包
       const username = document.getElementById('username-input').value.trim();
       const pincode  = document.getElementById('pincode-input').value.trim();
-      if (username && pincode.length >= 2) fetchWallet(username, pincode);
+      if (username) {
+        checkUsername(username);
+        if (pincode.length >= 2) {
+          setTimeout(() => onPincodeInput(), 700);
+        }
+      }
     }
 
     // ═══════════════════════════════════════════════════════
