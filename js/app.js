@@ -258,7 +258,22 @@ function endGame(reason) {
     observerFinal: game.obsPurse,
     bossFinal: game.bossPurse,
     exitReason: game.exitReason,
-    stats: game.stats
+    stats: game.stats,
+    shadow: typeof shadow !== 'undefined' ? {
+      finalPurse: shadow.purse,
+      netPnl: shadow.purse - (typeof INITIAL_PURSE !== 'undefined' ? INITIAL_PURSE : 50),
+      rounds: shadow.bet + shadow.skip,
+      bet: shadow.bet,
+      skip: shadow.skip,
+      win: shadow.win,
+      lose: shadow.lose,
+      totalStaked: shadow.totalStaked,
+      winRate: shadow.bet > 0 ? +(shadow.win / shadow.bet * 100).toFixed(1) : 0,
+      roi: shadow.totalStaked > 0
+        ? +((shadow.purse - (typeof INITIAL_PURSE !== 'undefined' ? INITIAL_PURSE : 50)) / shadow.totalStaked * 100).toFixed(1)
+        : 0,
+      exited: shadow.exited
+    } : null
   });
 
   saveLogToStorage();
