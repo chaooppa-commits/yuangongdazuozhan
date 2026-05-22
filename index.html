@@ -210,6 +210,8 @@
       _prevRoundData = null;
       _lastRoundData = null;
       document.getElementById('review-overlay').classList.remove('show');
+      // 重置影子选手
+      shadowReset();
       const seedStr = document.getElementById('seed-input').value.trim();
       startGame(selectedMode === 'kelly', seedStr);
     }
@@ -246,6 +248,132 @@
     // ═══════════════════════════════════════════════════════
     let _prevRoundData = null; // previous round for review
     let _lastRoundData = null; // { hands, settlement, actionEval }
+
+    // ═══════════════════════════════════════════════════════
+    // Shadow Player (影子选手)
+    // ═══════════════════════════════════════════════════════
+    const SHADOW_EXIT_THRESHOLD = 94; // 影子选手自成阈値
+
+    const shadow = {
+      purse: INITIAL_PURSE,
+      bet: 0, skip: 0, win: 0, lose: 0, totalStaked: 0,
+      exited: false,
+      pnlHistory: [0]
+    };
+
+    function shadowReset() {
+      shadow.purse = INITIAL_PURSE;
+      shadow.bet = 0; shadow.skip = 0;
+      shadow.win = 0; shadow.lose = 0;
+      shadow.totalStaked = 0;
+      shadow.exited = false;
+      shadow.pnlHistory = [0];
+    }
+
+    /**
+     * 计算某手牌对应的已出福星卡数量（在可见牌中）
+     * 当已出 >= 2 张时，tier 需要 -1
+     */
+    function countUsedBlessings(a, b, allVisible) {
+      const bless = blessingCards(a, b, []);  // 获取该组合的全部福星卡属性
+      let maxUsed = 0;
+      for (const bl of bless) {
+        const x = bl.value;
+        const total = CARD_COUNTS[x] || 0;
+        const used = allVisible.filter(c => c === x).length;
+        if (used > maxUsed) maxUsed = used;
+      }
+      return maxUsed;
+    }
+
+    /**
+     * 影子选手决策函数
+     * 返回 { target, amount } 或 { target: 'SKIP', amount: 0 }
+     */
+    function shadowDecide(hands, shadowPurse, bossPurse) {
+      // 影子选手检查退出阈値
+      if (shadowPurse >= SHADOW_EXIT_THRESHOLD) {
+        return { target: 'RUN', amount: 0 };
+      }
+
+      const allVisible = [];
+      for (let i = 0; i < 4; i++) allVisible.push(hands[i][0], hands[i][1]);
+
+      // 老板当前战力
+      const bossInfo = lookupTier(hands[0][0], hands[0][1]);
+      let bossTier = bossInfo ? Math.floor(bossInfo.tier) : 3;
+      const bossUsed = countUsedBlessings(hands[0][0], hands[0][1], allVisible);
+      if (bossUsed >= 2) bossTier = Math.max(1, bossTier - 1);
+
+      // 各员工当前战力
+      let bestTarget = null;
+      let bestAdjTier = -Infinity;
+
+      for (let i = 1; i <= 3; i++) {
+        const lbl = ['A', 'B', 'C'][i - 1];
+        const empInfo = lookupTier(hands[i][0], hands[i][1]);
+        let empTier = empInfo ? Math.floor(empInfo.tier) : 3;
+        const empUsed = countUsedBlessings(hands[i][0], hands[i][1], allVisible);
+        if (empUsed >= 2) empTier = Math.max(1, empTier - 1);
+
+        if (empTier > bestAdjTier) {
+          bestAdjTier = empTier;
+          bestTarget = lbl;
+        }
+      }
+
+      const gap = bestAdjTier - bossTier;
+
+      // 決策：差 >= 2 才投注
+      const gapStakeMap = { 2: 4, 3: 8, 4: 12, 5: 16 };
+      let stake = gapStakeMap[gap] || (gap >= 5 ? 16 : 0);
+
+      if (stake <= 0 || !bestTarget) return { target: 'SKIP', amount: 0 };
+
+      // 不能超过老板余额
+      stake = Math.min(stake, bossPurse, shadowPurse);
+      if (stake < 1) return { target: 'SKIP', amount: 0 };
+
+      return { target: bestTarget, amount: stake };
+    }
+
+    /**
+     * 在每局结算后同步影子选手的结果
+     * bossPurseAtBet 是投注时老板的笹码（影子用实际老板笹码限制）
+     */
+    function shadowSettle(hands, settlement, bossPurseForCap) {
+      if (shadow.exited) return;
+
+      const dec = shadowDecide(hands, shadow.purse, bossPurseForCap);
+
+      if (dec.target === 'RUN') {
+        shadow.exited = true;
+        shadow.pnlHistory.push(shadow.purse - INITIAL_PURSE);
+        return;
+      }
+      if (dec.target === 'SKIP' || dec.amount <= 0) {
+        shadow.skip++;
+        shadow.pnlHistory.push(shadow.pnlHistory[shadow.pnlHistory.length - 1]);
+        return;
+      }
+
+      // 影子投注
+      const er = settlement.employeeResults[dec.target];
+      shadow.bet++;
+      shadow.totalStaked += dec.amount;
+      let pnl = 0;
+      if (er.won) {
+        pnl = Math.min(dec.amount * er.mult, bossPurseForCap);
+        shadow.win++;
+      } else {
+        pnl = -dec.amount;
+        shadow.lose++;
+      }
+      shadow.purse += pnl;
+      if (shadow.purse < 0) shadow.purse = 0;
+      const cum = shadow.pnlHistory[shadow.pnlHistory.length - 1] + pnl;
+      shadow.pnlHistory.push(cum);
+    }
 
     function showReview() {
       tap();
@@ -317,6 +445,9 @@
         _lastRoundData = { hands: [...game.hands.map(h => [...h])], settlement, actionEval };
         game._lastSettlement = settlement;
         game._lastActionEval = actionEval;
+        // 影子选手结算（用结算前的老板笹码限额：当前 bossPurse 已变，还原）
+        const bossPurseBeforeSettle = game.bossPurse - settlement.bossPnl;
+        shadowSettle(game.hands, settlement, bossPurseBeforeSettle);
       }
 
       document.getElementById('round-num').textContent = game.roundNo;
@@ -382,8 +513,7 @@
               if (er.won && er.mult > 1) rowClass += ' result-mult';
             }
           } else {
-            // Boss row: only highlight multiplier (eating employee)
-            if (settlement.observerPnl < 0) rowClass += ' result-mult';
+            // Boss row: no border highlights
           }
         }
 
@@ -644,40 +774,46 @@
       const totalBet = game.stats.bet;
       const winRate = totalBet > 0 ? (game.stats.win / totalBet * 100).toFixed(0) : 0;
       const roi = game.stats.totalStaked > 0 ? (netPnl / game.stats.totalStaked * 100).toFixed(0) : 0;
-
+      
+      // 影子选手数据
+      const shadowNetPnl = shadow.purse - INITIAL_PURSE;
+      const shadowWinRate = shadow.bet > 0 ? (shadow.win / shadow.bet * 100).toFixed(0) : 0;
+      const shadowRoi = shadow.totalStaked > 0 ? (shadowNetPnl / shadow.totalStaked * 100).toFixed(0) : 0;
+      const shadowRounds = shadow.bet + shadow.skip;
+      
+      function sc(myVal, shVal, label) {
+        return `<div class="stat-card">
+          <div class="stat-value">${myVal}</div>
+          <div class="stat-label">${label}</div>
+          <div class="stat-shadow">${shVal}</div>
+        </div>`;
+      }
+      
       const grid = document.getElementById('stats-grid');
       grid.innerHTML = `
         <div class="stat-card highlight">
           <div class="stat-value">$${game.obsPurse}</div>
           <div class="stat-label">最终筹码</div>
+          <div class="stat-shadow">$${shadow.purse}${shadow.exited ? ' (已退)' : ''}</div>
         </div>
         <div class="stat-card ${netPnl >= 0 ? 'positive' : 'negative'}">
           <div class="stat-value">${netPnl >= 0 ? '+' : ''}${netPnl}</div>
-          <div class="stat-label">净盈亏</div>
+          <div class="stat-label">净盈产</div>
+          <div class="stat-shadow">${shadowNetPnl >= 0 ? '+' : ''}${shadowNetPnl}</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value">${game.roundNo}</div>
-          <div class="stat-label">总局数</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">${totalBet}/${game.roundNo}</div>
-          <div class="stat-label">下注/跳过</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">${winRate}%</div>
-          <div class="stat-label">胜率</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value">${roi}%</div>
-          <div class="stat-label">ROI</div>
-        </div>
+        ${sc(game.roundNo, shadowRounds, '总局数')}
+        ${sc(`${totalBet}/${game.roundNo - totalBet}`, `${shadow.bet}/${shadow.skip}`, '下注/跳过')}
+        ${sc(winRate + '%', shadowWinRate + '%', '胜率')}
+        ${sc(roi + '%', shadowRoi + '%', 'ROI')}
         <div class="stat-card">
           <div class="stat-value">${game.stats.win}/${game.stats.lose}</div>
           <div class="stat-label">胜/负</div>
+          <div class="stat-shadow">${shadow.win}/${shadow.lose}</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">A${game.stats.betTargetCount.A} B${game.stats.betTargetCount.B} C${game.stats.betTargetCount.C}</div>
           <div class="stat-label">押注分布</div>
+          <div class="stat-shadow">影子自动</div>
         </div>
       `;
 
