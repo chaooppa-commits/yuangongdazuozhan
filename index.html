@@ -376,7 +376,7 @@
       const pincode  = document.getElementById('pincode-input').value.trim();
 
       if (!username) { alert('请先输入昵称！'); return; }
-      if (pincode.length = 4) { alert('密码4位数字！'); return; }
+      if (pincode.length !== 4) { alert('密码需要4位数字！'); return; }
       if (!/^\d+$/.test(pincode)) { alert('密码只能是数字！'); return; }
 
       if (_walletBalance === null) {
