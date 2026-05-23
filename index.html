@@ -1073,11 +1073,10 @@
 
       ctx.clearRect(0, 0, w, h);
 
-      // Shadow curve (gray dashed)
+      // Shadow curve
       if (shData.length >= 2) {
         ctx.strokeStyle = 'rgba(156,163,175,0.55)';
         ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
         ctx.beginPath();
         for (let i = 0; i < shData.length; i++) {
           const x = (i / (shData.length - 1)) * w;
@@ -1086,13 +1085,11 @@
           else ctx.lineTo(x, y);
         }
         ctx.stroke();
-        ctx.setLineDash([]);
       }
 
-      // Player curve (dashed)
+      // Player curve
       ctx.strokeStyle = data[data.length - 1] >= 0 ? '#10b981' : '#f43f5e';
       ctx.lineWidth = 1.5;
-      ctx.setLineDash([6, 3]);
       ctx.beginPath();
       for (let i = 0; i < data.length; i++) {
         const x = (i / (data.length - 1)) * w;
@@ -1101,7 +1098,6 @@
         else ctx.lineTo(x, y);
       }
       ctx.stroke();
-      ctx.setLineDash([]);
     }
 
     function renderEndPnlChart() {
@@ -1127,11 +1123,10 @@
 
       ctx.clearRect(0, 0, w, h);
 
-      // Shadow curve (gray dashed)
+      // Shadow curve
       if (shData.length >= 2) {
         ctx.strokeStyle = 'rgba(156,163,175,0.55)';
         ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
         ctx.beginPath();
         for (let i = 0; i < shData.length; i++) {
           const x = (i / (shData.length - 1)) * w;
@@ -1140,13 +1135,11 @@
           else ctx.lineTo(x, y);
         }
         ctx.stroke();
-        ctx.setLineDash([]);
       }
 
-      // Player curve (dashed)
+      // Player curve
       ctx.strokeStyle = data[data.length - 1] >= 0 ? '#10b981' : '#f43f5e';
       ctx.lineWidth = 2;
-      ctx.setLineDash([6, 3]);
       ctx.beginPath();
       for (let i = 0; i < data.length; i++) {
         const x = (i / (data.length - 1)) * w;
@@ -1155,7 +1148,6 @@
         else ctx.lineTo(x, y);
       }
       ctx.stroke();
-      ctx.setLineDash([]);
     }
 
     // ═══════════════════════════════════════════════════════
