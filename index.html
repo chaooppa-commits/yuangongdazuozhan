@@ -1073,21 +1073,11 @@
 
       ctx.clearRect(0, 0, w, h);
 
-      const zeroY = h - ((0 - minVal) / range) * (h - 8) - 4;
-      ctx.strokeStyle = 'rgba(156,163,175,0.3)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.moveTo(0, zeroY);
-      ctx.lineTo(w, zeroY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Shadow curve (gray)
+      // Shadow curve (gray dashed)
       if (shData.length >= 2) {
-        ctx.strokeStyle = 'rgba(156,163,175,0.5)';
+        ctx.strokeStyle = 'rgba(156,163,175,0.55)';
         ctx.lineWidth = 1;
-        ctx.setLineDash([3, 3]);
+        ctx.setLineDash([4, 4]);
         ctx.beginPath();
         for (let i = 0; i < shData.length; i++) {
           const x = (i / (shData.length - 1)) * w;
@@ -1099,9 +1089,10 @@
         ctx.setLineDash([]);
       }
 
-      // Player curve
+      // Player curve (dashed)
       ctx.strokeStyle = data[data.length - 1] >= 0 ? '#10b981' : '#f43f5e';
       ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 3]);
       ctx.beginPath();
       for (let i = 0; i < data.length; i++) {
         const x = (i / (data.length - 1)) * w;
@@ -1110,14 +1101,7 @@
         else ctx.lineTo(x, y);
       }
       ctx.stroke();
-
-      const lastX = w;
-      const lastY = h - ((data[data.length - 1] - minVal) / range) * (h - 8) - 4;
-      ctx.lineTo(lastX, zeroY);
-      ctx.lineTo(0, zeroY);
-      ctx.closePath();
-      ctx.fillStyle = data[data.length - 1] >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)';
-      ctx.fill();
+      ctx.setLineDash([]);
     }
 
     function renderEndPnlChart() {
@@ -1143,21 +1127,11 @@
 
       ctx.clearRect(0, 0, w, h);
 
-      const zeroY = h - ((0 - minVal) / range) * (h - 8) - 4;
-      ctx.strokeStyle = 'rgba(156,163,175,0.3)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.moveTo(0, zeroY);
-      ctx.lineTo(w, zeroY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Shadow curve
+      // Shadow curve (gray dashed)
       if (shData.length >= 2) {
         ctx.strokeStyle = 'rgba(156,163,175,0.55)';
         ctx.lineWidth = 1;
-        ctx.setLineDash([3, 3]);
+        ctx.setLineDash([4, 4]);
         ctx.beginPath();
         for (let i = 0; i < shData.length; i++) {
           const x = (i / (shData.length - 1)) * w;
@@ -1169,9 +1143,10 @@
         ctx.setLineDash([]);
       }
 
-      // Player curve
+      // Player curve (dashed)
       ctx.strokeStyle = data[data.length - 1] >= 0 ? '#10b981' : '#f43f5e';
       ctx.lineWidth = 2;
+      ctx.setLineDash([6, 3]);
       ctx.beginPath();
       for (let i = 0; i < data.length; i++) {
         const x = (i / (data.length - 1)) * w;
@@ -1180,12 +1155,7 @@
         else ctx.lineTo(x, y);
       }
       ctx.stroke();
-
-      ctx.lineTo(w, zeroY);
-      ctx.lineTo(0, zeroY);
-      ctx.closePath();
-      ctx.fillStyle = data[data.length - 1] >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)';
-      ctx.fill();
+      ctx.setLineDash([]);
     }
 
     // ═══════════════════════════════════════════════════════
