@@ -126,6 +126,8 @@ function startGame(kellyMode, seedStr, buyin) {
   game.log = [];
   game.pnlHistory = [0];
   game.exitReason = '';
+  game.obsMaxPurse = initialPurse;
+  game.obsMinPurse = initialPurse;
 
   // Log session start
   pushLog({
@@ -195,16 +197,20 @@ function placeBet(target, amount) {
     game.obsPurse += observerPnl;
     game.bossPurse += bossPnl;
   
+    // 追踪观察者最高/最低筹码
+    if (game.obsPurse > game.obsMaxPurse) game.obsMaxPurse = game.obsPurse;
+    if (game.obsPurse < game.obsMinPurse) game.obsMinPurse = game.obsPurse;
+  
     if (game.currentBet.target !== 'SKIP') {
       if (observerPnl > 0) game.stats.win++;
       else game.stats.lose++;
     }
   
-    // 统计平吃：庄家平吃各玩家（分数相同或员工无斗口）
+    // 统计平吃：庄家平吃各玩家（分数相同或双方无斗口）
     for (const lbl of ['A', 'B', 'C']) {
       const er = settlement.employeeResults[lbl];
       if (!er.won && er.reason &&
-          (er.reason.includes('点数相同') || er.reason === '员工无斗口')) {
+          (er.reason.includes('点数相同') || er.reason === '双方无斗口')) {
         game.stats.flatEat[lbl]++;
         // 如果观察者押注了这个玩家，也计入 obs
         if (game.currentBet.target === lbl) {

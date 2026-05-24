@@ -181,6 +181,10 @@ function compareHands(bossHand, employeeHand) {
 
   // Employee has no doukou → boss wins
   if (eResult === null) {
+    if (bResult === null) {
+      // 双方都无斗口 → 平吃
+      return { winner: 'boss', reason: '双方无斗口', payoutMultiplier: 1 };
+    }
     return { winner: 'boss', reason: '员工无斗口', payoutMultiplier: 1 };
   }
 
