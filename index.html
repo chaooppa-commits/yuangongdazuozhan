@@ -251,6 +251,7 @@
         hintEl.textContent = '';
         _walletBalance = null;
         _isNewUser = false;
+        updateBuyinButtons(null);
         return;
       }
       amountEl.textContent = '查询中...';
@@ -258,16 +259,25 @@
     }
 
     // keepPin=true 时保留已有验证码并直接触发验证（回到首屏时用）
+    // 如果昵称和密码都有值，直接 fetchWallet 避免先校验用户名再校验密码的二次请求
     function checkUsername(username, keepPin) {
       const amountEl  = document.getElementById('wallet-amount');
       const pincodeEl = document.getElementById('pincode-input');
       const hintEl    = document.getElementById('pincode-hint');
+
+      // 昵称和密码都有值时，直接验证钱包，跳过 checkUsername
+      if (keepPin && pincodeEl.value.trim().length >= 2) {
+        fetchWallet(username, pincodeEl.value.trim());
+        return;
+      }
+
       fetch(SHEETS_URL + '?action=checkUsername&username=' + encodeURIComponent(username))
         .then(r => r.json())
         .then(data => {
           pincodeEl.disabled = false;
           if (!keepPin) pincodeEl.value = '';
           _walletBalance = null;
+          updateBuyinButtons(null);
           if (data.exists) {
             _isNewUser = false;
             if (keepPin) {
@@ -294,7 +304,7 @@
       const amountEl  = document.getElementById('wallet-amount');
       const hintEl    = document.getElementById('pincode-hint');
       if (!pincode || pincode.length < 2) {
-        if (!_isNewUser) _walletBalance = null;
+        if (!_isNewUser) { _walletBalance = null; updateBuyinButtons(null); }
         return;
       }
       if (_isNewUser) {
@@ -320,6 +330,7 @@
             amountEl.textContent = '密码错误';
             hintEl.textContent = '不是您的账号？请注册新用户';
             _walletBalance = null;
+            updateBuyinButtons(null);
             return;
           }
           _walletBalance = data.wallet;
@@ -330,19 +341,37 @@
         .catch(() => {
           amountEl.textContent = '查询失败';
           _walletBalance = null;
+          updateBuyinButtons(null);
         });
     }
 
-    // 根据荷包余额更新带入按钟可用状态
+    // 根据荷包余额更新带入按钮可用状态
     function updateBuyinButtons(balance) {
+      const canPlay = balance !== null && balance >= WALLET_MIN;
       let firstEnabled = null;
+
+      // 入场金额按钮
       document.querySelectorAll('[data-buyin]').forEach(btn => {
         const amount = parseInt(btn.dataset.buyin);
-        const disabled = balance < amount;
+        const disabled = !canPlay || balance < amount;
         btn.disabled = disabled;
         btn.classList.toggle('disabled', disabled);
         if (!disabled && !firstEnabled) firstEnabled = btn;
       });
+
+      // 模式按钮（如何伺候老板）
+      document.querySelectorAll('[data-mode]').forEach(btn => {
+        btn.disabled = !canPlay;
+        btn.classList.toggle('disabled', !canPlay);
+      });
+
+      // 老板来快活按钮
+      const startBtn = document.querySelector('.start-btn');
+      if (startBtn) {
+        startBtn.disabled = !canPlay;
+        startBtn.classList.toggle('disabled', !canPlay);
+      }
+
       // 自动选中第一个可用按钮
       if (firstEnabled) {
         selectedBuyin = parseInt(firstEnabled.dataset.buyin);
@@ -490,8 +519,6 @@
      */
     function shadowDecide(hands, shadowPurse, bossPurse) {
       // 影子退场：庄家开局筹码 - 影子净胜筹码 <= 阈値
-      // 影子净胜 = shadowPurse - INITIAL_PURSE
-      // 退场条件：INITIAL_PURSE - (shadowPurse - INITIAL_PURSE) <= SHADOW_EXIT_THRESHOLD
       const shadowNetWin = shadowPurse - INITIAL_PURSE;
       if ((INITIAL_PURSE - shadowNetWin) <= SHADOW_EXIT_THRESHOLD) {
         return { target: 'RUN', amount: 0 };
@@ -500,38 +527,56 @@
       const allVisible = [];
       for (let i = 0; i < 4; i++) allVisible.push(hands[i][0], hands[i][1]);
 
-      // 老板当前战力
+      // 老板当前战力（绝对值 + 等级）
       const bossInfo = lookupTier(hands[0][0], hands[0][1]);
       let bossTier = bossInfo ? Math.floor(bossInfo.tier) : 3;
+      const bossPower = bossInfo ? (bossInfo.mp || bossInfo.p_eq) : 40;
       const bossUsed = countUsedBlessings(hands[0][0], hands[0][1], allVisible);
       if (bossUsed >= 2) bossTier = Math.max(1, bossTier - 1);
 
-      // 各员工当前战力
+      // 步骤1：按战力绝对值选目标（选与庄家差最大的员工）
       let bestTarget = null;
-      let bestAdjTier = -Infinity;
+      let bestPowerGap = 0;  // 员工战力 - 老板战力，正值才有价值
+      let bestEmpTier = 0;
 
       for (let i = 1; i <= 3; i++) {
         const lbl = ['A', 'B', 'C'][i - 1];
         const empInfo = lookupTier(hands[i][0], hands[i][1]);
         let empTier = empInfo ? Math.floor(empInfo.tier) : 3;
+        const empPower = empInfo ? (empInfo.mp || empInfo.p_eq) : 40;
         const empUsed = countUsedBlessings(hands[i][0], hands[i][1], allVisible);
         if (empUsed >= 2) empTier = Math.max(1, empTier - 1);
 
-        if (empTier > bestAdjTier) {
-          bestAdjTier = empTier;
+        const powerGap = empPower - bossPower;
+        if (powerGap > bestPowerGap) {
+          bestPowerGap = powerGap;
           bestTarget = lbl;
+          bestEmpTier = empTier;
         }
       }
 
-      const gap = bestAdjTier - bossTier;
+      if (!bestTarget) return { target: 'SKIP', amount: 0 };
 
-      // 決策：差 >= 2 才投注
-      const gapStakeMap = { 2: 4, 3: 8, 4: 12, 5: 16 };
-      let stake = gapStakeMap[gap] || (gap >= 5 ? 16 : 0);
+      // 步骤2：按等级差决定下注额
+      const tierGap = bestEmpTier - bossTier;
 
-      if (stake <= 0 || !bestTarget) return { target: 'SKIP', amount: 0 };
+      // 中优势：2档差 → 下4；但1234组合只有1档差也算中优势 → 下4
+      // 高优势：3档差 → 下8
+      // 超优势：4档差 → 下12
+      // 其他：pass
+      const is1234 = (bossInfo && bossInfo.mn === '1234'); // 庄家拿到1234组合时，1档也当中优势
+      let stake = 0;
+      if (tierGap === 2 || (tierGap === 1 && is1234)) {
+        stake = 4;
+      } else if (tierGap === 3) {
+        stake = 8;
+      } else if (tierGap >= 4) {
+        stake = 12;
+      }
 
-      // 不能超过老板余额
+      if (stake <= 0) return { target: 'SKIP', amount: 0 };
+
+      // 不能超过老板余额和影子余额
       stake = Math.min(stake, bossPurse, shadowPurse);
       if (stake < 1) return { target: 'SKIP', amount: 0 };
 
@@ -1018,7 +1063,7 @@
         </div>
         <div class="stat-card">
           <div class="stat-value">A${game.stats.flatEat.A} B${game.stats.flatEat.B} C${game.stats.flatEat.C}</div>
-          <div class="stat-label">平吃 (平局/无斗口)</div>
+          <div class="stat-label">平吃 (同点/同无斗口)</div>
           <div class="stat-shadow">计入obs: ${game.stats.flatEat.obs}局</div>
         </div>
       `;
@@ -1073,14 +1118,34 @@
 
       ctx.clearRect(0, 0, w, h);
 
+      const initial = game._initialPurse || INITIAL_PURSE;
+      const labelW = 36;  // 左侧标签宽度
+      const chartW = w - labelW;
+
+      // 左侧数值标签：初始/最大/最小
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'left';
+      function yOf(v) { return h - ((v - minVal) / range) * (h - 8) - 4; }
+
+      ctx.fillStyle = 'rgba(156,163,175,0.7)';
+      ctx.fillText(initial, 0, yOf(0) - 2);
+      if (game.obsMaxPurse > initial) {
+        ctx.fillStyle = '#10b981';
+        ctx.fillText(game.obsMaxPurse, 0, yOf(game.obsMaxPurse - initial) - 2);
+      }
+      if (game.obsMinPurse < initial) {
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillText(game.obsMinPurse, 0, yOf(game.obsMinPurse - initial) + 9);
+      }
+
       // Shadow curve
       if (shData.length >= 2) {
         ctx.strokeStyle = 'rgba(156,163,175,0.55)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (let i = 0; i < shData.length; i++) {
-          const x = (i / (shData.length - 1)) * w;
-          const y = h - ((shData[i] - minVal) / range) * (h - 8) - 4;
+          const x = labelW + (i / (shData.length - 1)) * chartW;
+          const y = yOf(shData[i]);
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
@@ -1092,8 +1157,8 @@
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       for (let i = 0; i < data.length; i++) {
-        const x = (i / (data.length - 1)) * w;
-        const y = h - ((data[i] - minVal) / range) * (h - 8) - 4;
+        const x = labelW + (i / (data.length - 1)) * chartW;
+        const y = yOf(data[i]);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
@@ -1123,14 +1188,34 @@
 
       ctx.clearRect(0, 0, w, h);
 
+      const initial = game._initialPurse || INITIAL_PURSE;
+      const labelW = 40;
+      const chartW = w - labelW;
+
+      // 左侧数值标签：初始/最大/最小
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'left';
+      function yOf(v) { return h - ((v - minVal) / range) * (h - 8) - 4; }
+
+      ctx.fillStyle = 'rgba(156,163,175,0.7)';
+      ctx.fillText(initial, 0, yOf(0) - 2);
+      if (game.obsMaxPurse > initial) {
+        ctx.fillStyle = '#10b981';
+        ctx.fillText(game.obsMaxPurse, 0, yOf(game.obsMaxPurse - initial) - 2);
+      }
+      if (game.obsMinPurse < initial) {
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillText(game.obsMinPurse, 0, yOf(game.obsMinPurse - initial) + 10);
+      }
+
       // Shadow curve
       if (shData.length >= 2) {
         ctx.strokeStyle = 'rgba(156,163,175,0.55)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (let i = 0; i < shData.length; i++) {
-          const x = (i / (shData.length - 1)) * w;
-          const y = h - ((shData[i] - minVal) / range) * (h - 8) - 4;
+          const x = labelW + (i / (shData.length - 1)) * chartW;
+          const y = yOf(shData[i]);
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
@@ -1142,8 +1227,8 @@
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let i = 0; i < data.length; i++) {
-        const x = (i / (data.length - 1)) * w;
-        const y = h - ((data[i] - minVal) / range) * (h - 8) - 4;
+        const x = labelW + (i / (data.length - 1)) * chartW;
+        const y = yOf(data[i]);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
@@ -1539,6 +1624,7 @@
     // ═══════════════════════════════════════════════════════
 
     showScreen('start-screen');
+    updateBuyinButtons(null);  // 初始禁用所有按钮
     initUsername();
   </script>
 </body>
