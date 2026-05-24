@@ -561,6 +561,20 @@ html, body {
 .emp-result-row .emp-lose { color: var(--accent); }
 
 /* PnL mini chart */
+.pnl-labels {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 30px;
+  flex-shrink: 0;
+  font-size: 9px;
+  line-height: 1;
+  padding: 2px 0;
+  color: var(--text-dim);
+}
+.pnl-labels .lbl-max { color: var(--green); }
+.pnl-labels .lbl-min { color: var(--accent); }
+
 .pnl-chart {
   height: 40px;
   margin: 8px 12px;
@@ -759,14 +773,24 @@ html, body {
   margin-bottom: 16px;
 }
 
+.end-pnl-chart-wrap {
+  display: flex;
+  align-items: stretch;
+  max-width: 360px;
+  margin-bottom: 20px;
+}
+.end-pnl-chart-wrap .pnl-labels {
+  font-size: 10px;
+  width: 34px;
+}
 .end-pnl-chart {
   width: 100%;
   max-width: 360px;
   height: 80px;
-  margin-bottom: 20px;
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--bg2);
+  flex: 1;
 }
 
 .end-pnl-chart canvas {
@@ -1193,8 +1217,8 @@ html, body {
 /* PnL 图表行（图+战力表按钮） */
 .pnl-chart-row {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: stretch;
+  gap: 4px;
   margin: 8px 12px;
 }
 .pnl-chart-row .pnl-chart {
