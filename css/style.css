@@ -170,6 +170,11 @@ html, body {
   cursor: not-allowed;
   pointer-events: none;
 }
+.start-btn.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 .start-btn {
   width: 100%;
