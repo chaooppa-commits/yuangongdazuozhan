@@ -83,6 +83,7 @@
 
     <!-- PnL chart -->
     <div class="pnl-chart-row">
+      <div class="pnl-labels" id="pnl-labels"></div>
       <div class="pnl-chart">
         <canvas id="pnl-canvas"></canvas>
       </div>
@@ -114,8 +115,11 @@
   <div id="end-screen">
     <h2 id="end-title" style="display:none">对决结束</h2>
     <p class="end-subtitle" id="end-subtitle" style="display:none"></p>
-    <div class="end-pnl-chart">
-      <canvas id="end-pnl-canvas"></canvas>
+    <div class="end-pnl-chart-wrap">
+      <div class="pnl-labels" id="end-pnl-labels"></div>
+      <div class="end-pnl-chart">
+        <canvas id="end-pnl-canvas"></canvas>
+      </div>
     </div>
     <div class="stats-grid" id="stats-grid">
       <!-- Rendered dynamically -->
@@ -1093,6 +1097,16 @@
     // PnL Mini Chart
     // ═══════════════════════════════════════════════════════
 
+    function updatePnlLabels(containerId) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      const initial = game._initialPurse || INITIAL_PURSE;
+      let html = `<span class="lbl-max">${game.obsMaxPurse}</span>`;
+      html += `<span>${initial}</span>`;
+      html += `<span class="lbl-min">${game.obsMinPurse}</span>`;
+      el.innerHTML = html;
+    }
+
     function renderPnlChart() {
       const canvas = document.getElementById('pnl-canvas');
       const ctx = canvas.getContext('2d');
@@ -1118,25 +1132,7 @@
 
       ctx.clearRect(0, 0, w, h);
 
-      const initial = game._initialPurse || INITIAL_PURSE;
-      const labelW = 36;  // 左侧标签宽度
-      const chartW = w - labelW;
-
-      // 左侧数值标签：初始/最大/最小
-      ctx.font = '9px sans-serif';
-      ctx.textAlign = 'left';
-      function yOf(v) { return h - ((v - minVal) / range) * (h - 8) - 4; }
-
-      ctx.fillStyle = 'rgba(156,163,175,0.7)';
-      ctx.fillText(initial, 0, yOf(0) - 2);
-      if (game.obsMaxPurse > initial) {
-        ctx.fillStyle = '#10b981';
-        ctx.fillText(game.obsMaxPurse, 0, yOf(game.obsMaxPurse - initial) - 2);
-      }
-      if (game.obsMinPurse < initial) {
-        ctx.fillStyle = '#f43f5e';
-        ctx.fillText(game.obsMinPurse, 0, yOf(game.obsMinPurse - initial) + 9);
-      }
+      updatePnlLabels('pnl-labels');
 
       // Shadow curve
       if (shData.length >= 2) {
@@ -1144,8 +1140,8 @@
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (let i = 0; i < shData.length; i++) {
-          const x = labelW + (i / (shData.length - 1)) * chartW;
-          const y = yOf(shData[i]);
+          const x = (i / (shData.length - 1)) * w;
+          const y = h - ((shData[i] - minVal) / range) * (h - 8) - 4;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
@@ -1157,8 +1153,8 @@
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       for (let i = 0; i < data.length; i++) {
-        const x = labelW + (i / (data.length - 1)) * chartW;
-        const y = yOf(data[i]);
+        const x = (i / (data.length - 1)) * w;
+        const y = h - ((data[i] - minVal) / range) * (h - 8) - 4;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
@@ -1188,25 +1184,7 @@
 
       ctx.clearRect(0, 0, w, h);
 
-      const initial = game._initialPurse || INITIAL_PURSE;
-      const labelW = 40;
-      const chartW = w - labelW;
-
-      // 左侧数值标签：初始/最大/最小
-      ctx.font = '10px sans-serif';
-      ctx.textAlign = 'left';
-      function yOf(v) { return h - ((v - minVal) / range) * (h - 8) - 4; }
-
-      ctx.fillStyle = 'rgba(156,163,175,0.7)';
-      ctx.fillText(initial, 0, yOf(0) - 2);
-      if (game.obsMaxPurse > initial) {
-        ctx.fillStyle = '#10b981';
-        ctx.fillText(game.obsMaxPurse, 0, yOf(game.obsMaxPurse - initial) - 2);
-      }
-      if (game.obsMinPurse < initial) {
-        ctx.fillStyle = '#f43f5e';
-        ctx.fillText(game.obsMinPurse, 0, yOf(game.obsMinPurse - initial) + 10);
-      }
+      updatePnlLabels('end-pnl-labels');
 
       // Shadow curve
       if (shData.length >= 2) {
@@ -1214,8 +1192,8 @@
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (let i = 0; i < shData.length; i++) {
-          const x = labelW + (i / (shData.length - 1)) * chartW;
-          const y = yOf(shData[i]);
+          const x = (i / (shData.length - 1)) * w;
+          const y = h - ((shData[i] - minVal) / range) * (h - 8) - 4;
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
@@ -1227,8 +1205,8 @@
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let i = 0; i < data.length; i++) {
-        const x = labelW + (i / (data.length - 1)) * chartW;
-        const y = yOf(data[i]);
+        const x = (i / (data.length - 1)) * w;
+        const y = h - ((data[i] - minVal) / range) * (h - 8) - 4;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
