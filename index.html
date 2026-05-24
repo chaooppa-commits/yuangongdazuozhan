@@ -440,6 +440,7 @@
       shadowReset();
       const seedStr = document.getElementById('seed-input').value.trim();
       startGame(selectedMode === 'kelly', seedStr, selectedBuyin);
+      updatePnlLabels('pnl-labels');  // 游戏开始即显示初始金额
     }
 
     // ═══════════════════════════════════════════════════════
@@ -1101,9 +1102,12 @@
       const el = document.getElementById(containerId);
       if (!el) return;
       const initial = game._initialPurse || INITIAL_PURSE;
-      let html = `<span class="lbl-max">${game.obsMaxPurse}</span>`;
+      const started = game.phase || game.roundNo > 0;
+      const maxVal = started ? game.obsMaxPurse : '--';
+      const minVal = started ? game.obsMinPurse : '--';
+      let html = `<span class="lbl-max">${maxVal}</span>`;
       html += `<span>${initial}</span>`;
-      html += `<span class="lbl-min">${game.obsMinPurse}</span>`;
+      html += `<span class="lbl-min">${minVal}</span>`;
       el.innerHTML = html;
     }
 
