@@ -452,21 +452,21 @@ html, body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  gap: 3px;
+  gap: 2px;
   flex-shrink: 0;
-  width: 80px;
+  width: 70px;
 }
 
 .meta-cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  border-radius: 5px;
+  font-size: 0.7rem;
   font-weight: 600;
   border: 1px solid rgba(148,163,184,0.25);
   background: rgba(30,30,40,0.6);
-  min-height: 26px;
+  min-height: 22px;
 }
 
 .meta-power {
