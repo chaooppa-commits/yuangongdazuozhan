@@ -816,28 +816,26 @@
         }
         html += `</div>`;
       
-        // 星级
-        if (showTier && tierInfo) {
-          html += `<span class="tier-badge tier-${tierInfo.tier}" style="font-size:0.75rem;padding:1px 4px">${tierInfo.tier}星</span>`;
+        // 福星卡已出张数（总初始 - 剩余）
+        let blessingUsed = 0;
+        const initialCount = (val) => val === 1 ? 8 : 4;
+        for (const b of blessings) {
+          blessingUsed += initialCount(b.value) - b.remaining;
         }
+        const blessingUsedStr = blessings.length > 0 ? `-${blessingUsed}` : '-';
       
-        // 战力数值
-        html += `<span class="power-value">${mp}</span>`;
-      
-        // 与庄家的战力差
+        html += `<div class="player-meta-grid">`;
+        html += `<div class="meta-cell meta-power">${mp}</div>`;
         if (i > 0) {
           const diffClass = powerDiff > 0 ? 'positive' : powerDiff < 0 ? 'negative' : 'zero';
           const diffSign = powerDiff > 0 ? '+' : '';
-          html += `<span class="power-diff ${diffClass}">${diffSign}${powerDiff}</span>`;
+          html += `<div class="meta-cell meta-diff ${diffClass}">${diffSign}${powerDiff}</div>`;
         } else {
-          html += `<span class="power-diff boss-label">庄</span>`;
+          html += `<div class="meta-cell meta-diff boss-label">庄</div>`;
         }
-      
-        // 口诀
-        html += `<span class="mnemonic-right">${tierInfo ? tierInfo.mn : '-'}</span>`;
-      
-        // 福星卡剩余张数
-        html += `<div class="blessing-hint">${blessingStr || '-'}</div>`;
+        html += `<div class="meta-cell meta-mn">${tierInfo ? tierInfo.mn : '-'}</div>`;
+        html += `<div class="meta-cell meta-bless">${blessingUsedStr}</div>`;
+        html += `</div>`;
       
         html += `</div>`;
       }
