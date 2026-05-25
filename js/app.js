@@ -10,7 +10,7 @@
 const INITIAL_PURSE = 50;
 const MAX_ROUNDS = 100;
 const PLAYERS = ['Boss', 'A', 'B', 'C'];
-const STAKE_OPTIONS = [4, 8, 12, 16];
+const STAKE_OPTIONS = [4, 8, 12, 16, 20];
 
 // ═══════════════════════════════════════════════════════
 // Game State
@@ -121,7 +121,8 @@ function startGame(kellyMode, seedStr, buyin) {
     skip: 0, bet: 0, win: 0, lose: 0, totalStaked: 0,
     betTargetCount: { A: 0, B: 0, C: 0 },
     stakeCount: {},
-    flatEat: { obs: 0, A: 0, B: 0, C: 0 }
+    flatEat: { obs: 0, A: 0, B: 0, C: 0 },
+    multCount: { 2: 0, 3: 0, 4: 0 }
   };
   game.log = [];
   game.pnlHistory = [0];
@@ -202,8 +203,14 @@ function placeBet(target, amount) {
     if (game.obsPurse < game.obsMinPurse) game.obsMinPurse = game.obsPurse;
   
     if (game.currentBet.target !== 'SKIP') {
-      if (observerPnl > 0) game.stats.win++;
-      else game.stats.lose++;
+      if (observerPnl > 0) {
+        game.stats.win++;
+        // 统计多倍赔率
+        const er = settlement.employeeResults[game.currentBet.target];
+        if (er && er.mult >= 2) game.stats.multCount[er.mult]++;
+      } else {
+        game.stats.lose++;
+      }
     }
   
     // 统计平吃：庄家平吃各玩家（分数相同或双方无斗口）
@@ -467,12 +474,13 @@ const CORRECTED_TABLE = {
   '5,8': { tier: 4, p_eq: 47.89, mn: '235', mp: 48 },
   '6,8': { tier: 4, p_eq: 47.86, mn: '631', mp: 48 },
   '3,4': { tier: 4, p_eq: 47.80, mn: '631', mp: 48 },
-  '1,4': { tier: 4., p_eq: 47.08, mn: '631', mp: 47 },
+ 
 
   // 3星（p_eq 45–47.1）
-  '4,8': { tier: 3., p_eq: 47.31, mn: '234', mp: 47 },
-  '3,5': { tier: 3, p_eq: 47.07, mn: '234', mp: 47 },
-  '2,6': { tier: 3, p_eq: 46.89, mn: '234', mp: 47 },
+  '1,4': { tier: 4., p_eq: 47.08, mn: '1234', mp: 47 },
+  '4,8': { tier: 3., p_eq: 47.31, mn: '1234', mp: 47 },
+  '3,5': { tier: 3, p_eq: 47.07, mn: '1234', mp: 47 },
+  '2,6': { tier: 3, p_eq: 46.89, mn: '1234', mp: 47 },
   '8,9': { tier: 3, p_eq: 46.86, mn: '876', mp: 46 },
   '7,9': { tier: 3, p_eq: 45.73, mn: '876', mp: 46 },
   '6,7': { tier: 3, p_eq: 46.44, mn: '876', mp: 46 },
@@ -532,14 +540,15 @@ function getPlayerPower(hand) {
 
 function evaluateAction(hands, betTarget, betAmount) {
   const bossInfo = getPlayerPower(hands[0]);
+  const bossRate = bossInfo ? bossInfo.p_eq : 45;
+  const bossMp = bossInfo ? bossInfo.mp : 40;
+  const bossTier = bossInfo ? bossInfo.tier : 3;
+
   const empInfos = {
     A: getPlayerPower(hands[1]),
     B: getPlayerPower(hands[2]),
     C: getPlayerPower(hands[3])
   };
-
-  const bossTier = bossInfo ? bossInfo.tier : 3;
-  const bossRate = bossInfo ? bossInfo.p_eq : 45;
 
   // 计算每个员工vs老板的战力差
   const gaps = {};
@@ -548,12 +557,14 @@ function evaluateAction(hands, betTarget, betAmount) {
     if (info) {
       gaps[lbl] = {
         rateDiff: info.p_eq - bossRate,
+        mpDiff: info.mp - bossMp,
         tierDiff: info.tier - bossTier,
         tier: info.tier,
-        rate: info.p_eq
+        rate: info.p_eq,
+        mp: info.mp
       };
     } else {
-      gaps[lbl] = { rateDiff: 0, tierDiff: 0, tier: 3, rate: 45 };
+      gaps[lbl] = { rateDiff: 0, mpDiff: 0, tierDiff: 0, tier: 3, rate: 45, mp: 40 };
     }
   }
 
@@ -565,50 +576,112 @@ function evaluateAction(hands, betTarget, betAmount) {
     if (g > bestGap) { bestGap = g; bestLbl = lbl; }
   }
 
-  // 如果下注，用选中员工；如果 SKIP，用最佳员工作参考
-  const evalLbl = (betTarget === 'SKIP') ? (bestLbl || 'A') : betTarget;
-  const sel = gaps[evalLbl];
-
-  // 构建显示字符串: "X星-Y星=Z档；M%-N%=±D%；投N或pass"
+  // 构建显示字符串
   function buildDetail(empTier, empRate, bossTierV, bossRateV, gapDiff, rateDiff, stakeStr) {
     const gap = gapDiff >= 0 ? gapDiff : 0;
     const rateD = (rateDiff >= 0 ? '+' : '') + rateDiff.toFixed(0) + '%';
-    // 格式: "5-2=3星；50%-40%=+10%；挂5或pass"
     return `${empTier}-${bossTierV}=${gap}星；${empRate.toFixed(0)}%-${bossRateV.toFixed(0)}%=${rateD}；${stakeStr}`;
   }
 
-  // ——— SKIP ———
+  const evalLbl = (betTarget === 'SKIP') ? (bestLbl || 'A') : betTarget;
+  const sel = gaps[evalLbl];
+  const d = buildDetail(sel.tier, sel.rate, bossTier, bossRate, sel.tierDiff, sel.rateDiff, betTarget === 'SKIP' ? 'pass' : `投${betAmount}`);
+
+  // ═══════════════════════════════════════════════════════
+  // 影子选手决策（内联，与 shadowDecide 逻辑一致）
+  // ═══════════════════════════════════════════════════════
+  const allVisible = [];
+  for (let i = 0; i < 4; i++) allVisible.push(hands[i][0], hands[i][1]);
+
+  // 影子选目标：按 mp 差最大
+  let shadowTarget = null;
+  let shadowBestGap = -999;
+  for (const lbl of ['A', 'B', 'C']) {
+    const g = gaps[lbl].mpDiff;
+    if (g > shadowBestGap) { shadowBestGap = g; shadowTarget = lbl; }
+  }
+
+  // 影子按 mp 差决定倍数
+  let shadowMult = 0;
+  if (shadowBestGap >= 15) shadowMult = 4;
+  else if (shadowBestGap >= 12) shadowMult = 3;
+  else if (shadowBestGap >= 9) shadowMult = 2;
+  else if (shadowBestGap >= 6) shadowMult = 1;
+
+  // 影子福星卡调整
+  if (typeof blessingCards === 'function' && shadowTarget) {
+    const targetIdx = ['A', 'B', 'C'].indexOf(shadowTarget) + 1;
+
+    function countBlessingUsed(a, b, visible) {
+      const blessings = blessingCards(a, b, visible);
+      let maxUsed = 0;
+      for (const bInfo of blessings) {
+        const used = visible.filter(c => c === bInfo.value).length;
+        const weight = bInfo.value === 1 ? 0.5 : 1;
+        if (used * weight > maxUsed) maxUsed = used * weight;
+      }
+      return maxUsed;
+    }
+
+    const bossUsed = countBlessingUsed(hands[0][0], hands[0][1], allVisible);
+    if (bossUsed >= 2) shadowMult += 1;
+
+    const empUsed = countBlessingUsed(hands[targetIdx][0], hands[targetIdx][1], allVisible);
+    if (empUsed >= 2) shadowMult -= 1;
+  }
+
+  const stakeMap = { 0: 0, 1: 4, 2: 8, 3: 12, 4: 16, 5: 20 };
+  const shadowAmount = stakeMap[shadowMult] || 0;
+
+  // ═══════════════════════════════════════════════════════
+  // 理性判断：与影子选手决策一致
+  // ═══════════════════════════════════════════════════════
+
+  // 情况1：双方都 SKIP
+  if (shadowAmount === 0 && betTarget === 'SKIP') {
+    return { tag: '理性', detail: d };
+  }
+
+  // 情况2：双方都下注，目标相同且金额相同
+  if (shadowAmount > 0 && betTarget !== 'SKIP' && betTarget === shadowTarget && betAmount === shadowAmount) {
+    return { tag: '理性', detail: d };
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // 不一致时的冒进/保守判断
+  // ═══════════════════════════════════════════════════════
+
+  // 观察者 pass 但影子下注 → 保守（放弃了好机会）
   if (betTarget === 'SKIP') {
-    // 以最佳员工作为参考评估
-    const stakeStr = 'pass';
-    const d = buildDetail(sel.tier, sel.rate, bossTier, bossRate, sel.tierDiff, sel.rateDiff, stakeStr);
-    // 等级差 < 2：pass 理性；等级差 >= 2：pass 保守（放弃了好机会）
-    const tag = sel.tierDiff >= 2 ? '保守' : '理性';
-    return { tag, detail: d };
-  }
-
-  // ——— 下注 ———
-  // 推荐注码：gap=2→4, gap=3→8, gap=4→12, gap>=5→16, gap<=1→4
-  const recStake = STAKE_FOR_GAP[sel.tierDiff] || (sel.tierDiff >= 4 ? 12 : 4);
-  const stakeStr = `投${betAmount}`;
-  const d = buildDetail(sel.tier, sel.rate, bossTier, bossRate, sel.tierDiff, sel.rateDiff, stakeStr);
-
-  // 冒进：战力不占优（tier差<=0）还投注
-  if (sel.tierDiff <= 0) {
-    return { tag: '冒进', detail: d };
-  }
-
-  // 注码与战力差的匹配判断
-  if (betAmount > recStake) {
-    // 小差投大注 → 冒进
-    return { tag: '冒进', detail: d };
-  }
-  if (betAmount < recStake) {
-    // 大差投小注 → 保守
     return { tag: '保守', detail: d };
   }
 
-  // 投注匹配战力差 → 理性
+  // 影子 SKIP 但观察者下注 → 冒进（不该出手）
+  if (shadowAmount === 0) {
+    return { tag: '冒进', detail: d };
+  }
+
+  // 两者都下注：金额比较
+  if (betAmount > shadowAmount) {
+    // 小战力差（相对影子）下大注 → 冒进
+    return { tag: '冒进', detail: d };
+  }
+  if (betAmount < shadowAmount) {
+    // 大战力差（相对影子）下小注 → 保守
+    return { tag: '保守', detail: d };
+  }
+
+  // 金额相同但目标不同
+  if (betAmount === shadowAmount && betTarget !== shadowTarget) {
+    const obsGap = gaps[betTarget].rateDiff;
+    const shadowGapVal = gaps[shadowTarget].rateDiff;
+    if (obsGap < shadowGapVal) {
+      return { tag: '冒进', detail: d }; // 选了更弱的员工
+    } else {
+      return { tag: '保守', detail: d };
+    }
+  }
+
   return { tag: '理性', detail: d };
 }
 
