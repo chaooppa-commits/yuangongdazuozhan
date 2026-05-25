@@ -816,6 +816,11 @@
         }
         html += `</div>`;
       
+        // 星级
+        if (showTier && tierInfo) {
+          html += `<span class="tier-badge tier-${tierInfo.tier}" style="font-size:0.75rem;padding:1px 4px">${tierInfo.tier}星</span>`;
+        }
+      
         // 战力数值
         html += `<span class="power-value">${mp}</span>`;
       
@@ -828,10 +833,10 @@
           html += `<span class="power-diff boss-label">庄</span>`;
         }
       
-        // 口诀移至右侧
+        // 口诀
         html += `<span class="mnemonic-right">${tierInfo ? tierInfo.mn : '-'}</span>`;
       
-        // 福星卡提示
+        // 福星卡剩余张数
         html += `<div class="blessing-hint">${blessingStr || '-'}</div>`;
       
         html += `</div>`;
