@@ -489,6 +489,7 @@
     const shadow = {
       purse: INITIAL_PURSE,
       bet: 0, skip: 0, win: 0, lose: 0, totalStaked: 0,
+      multCount: { 2: 0, 3: 0, 4: 0 },
       exited: false,
       pnlHistory: [0]
     };
@@ -498,24 +499,28 @@
       shadow.bet = 0; shadow.skip = 0;
       shadow.win = 0; shadow.lose = 0;
       shadow.totalStaked = 0;
+      shadow.multCount = { 2: 0, 3: 0, 4: 0 };
       shadow.exited = false;
       shadow.pnlHistory = [0];
     }
 
     /**
-     * 计算某手牌对应的已出福星卡数量（在可见牌中）
-     * 当已出 >= 2 张时，tier 需要 -1
+     * 计算某手牌对应的已出福星卡加权消耗量
+     * 福星卡值=1时，每2张等效于1张2-9的福星卡（权重0.5）
+     * 福星卡值=2-9时，权重1
+     * 当加权消耗 >= 2 时，tier 需要 -1
      */
     function countUsedBlessings(a, b, allVisible) {
       const bless = blessingCards(a, b, []);  // 获取该组合的全部福星卡属性
-      let maxUsed = 0;
+      let maxWeightedUsed = 0;
       for (const bl of bless) {
         const x = bl.value;
-        const total = CARD_COUNTS[x] || 0;
         const used = allVisible.filter(c => c === x).length;
-        if (used > maxUsed) maxUsed = used;
+        const weight = (x === 1) ? 0.5 : 1;
+        const weightedUsed = used * weight;
+        if (weightedUsed > maxWeightedUsed) maxWeightedUsed = weightedUsed;
       }
-      return maxUsed;
+      return maxWeightedUsed;
     }
 
     /**
@@ -532,52 +537,56 @@
       const allVisible = [];
       for (let i = 0; i < 4; i++) allVisible.push(hands[i][0], hands[i][1]);
 
-      // 老板当前战力（绝对值 + 等级）
+      // 庄家战力（绝对值）
       const bossInfo = lookupTier(hands[0][0], hands[0][1]);
-      let bossTier = bossInfo ? Math.floor(bossInfo.tier) : 3;
       const bossPower = bossInfo ? (bossInfo.mp || bossInfo.p_eq) : 40;
-      const bossUsed = countUsedBlessings(hands[0][0], hands[0][1], allVisible);
-      if (bossUsed >= 2) bossTier = Math.max(1, bossTier - 1);
 
       // 步骤1：按战力绝对值选目标（选与庄家差最大的员工）
       let bestTarget = null;
-      let bestPowerGap = 0;  // 员工战力 - 老板战力，正值才有价值
-      let bestEmpTier = 0;
+      let bestPowerGap = 0;
 
       for (let i = 1; i <= 3; i++) {
         const lbl = ['A', 'B', 'C'][i - 1];
         const empInfo = lookupTier(hands[i][0], hands[i][1]);
-        let empTier = empInfo ? Math.floor(empInfo.tier) : 3;
         const empPower = empInfo ? (empInfo.mp || empInfo.p_eq) : 40;
-        const empUsed = countUsedBlessings(hands[i][0], hands[i][1], allVisible);
-        if (empUsed >= 2) empTier = Math.max(1, empTier - 1);
-
         const powerGap = empPower - bossPower;
         if (powerGap > bestPowerGap) {
           bestPowerGap = powerGap;
           bestTarget = lbl;
-          bestEmpTier = empTier;
         }
       }
 
       if (!bestTarget) return { target: 'SKIP', amount: 0 };
 
-      // 步骤2：按等级差决定下注额
-      const tierGap = bestEmpTier - bossTier;
-
-      // 中优势：2档差 → 下4；但1234组合只有1档差也算中优势 → 下4
-      // 高优势：3档差 → 下8
-      // 超优势：4档差 → 下12
-      // 其他：pass
-      const is1234 = (bossInfo && bossInfo.mn === '1234'); // 庄家拿到1234组合时，1档也当中优势
-      let stake = 0;
-      if (tierGap === 2 || (tierGap === 1 && is1234)) {
-        stake = 4;
-      } else if (tierGap === 3) {
-        stake = 8;
-      } else if (tierGap >= 4) {
-        stake = 12;
+      // 步骤2：按战力差决定倍数档位
+      // ≥6→1x($4), ≥9→2x($8), ≥12→3x($12), ≥15→4x($16)
+      let multiplier = 0;
+      if (bestPowerGap >= 15) {
+        multiplier = 4;
+      } else if (bestPowerGap >= 12) {
+        multiplier = 3;
+      } else if (bestPowerGap >= 9) {
+        multiplier = 2;
+      } else if (bestPowerGap >= 6) {
+        multiplier = 1;
       }
+
+      if (multiplier <= 0) return { target: 'SKIP', amount: 0 };
+
+      // 步骤3：福星卡档位调整
+      const targetIdx = ['A', 'B', 'C'].indexOf(bestTarget) + 1;
+
+      // BOSS福星卡出两张 → 加1档（BOSS福星耗尽=BOSS变弱）
+      const bossUsed = countUsedBlessings(hands[0][0], hands[0][1], allVisible);
+      if (bossUsed >= 2) multiplier += 1;
+
+      // 自己（目标员工）福星卡出两张 → 降1档（福星耗尽=自己变弱）
+      const empUsed = countUsedBlessings(hands[targetIdx][0], hands[targetIdx][1], allVisible);
+      if (empUsed >= 2) multiplier -= 1;
+
+      // 倍数映射到金额
+      const stakeMap = { 0: 0, 1: 4, 2: 8, 3: 12, 4: 16, 5: 20 };
+      let stake = stakeMap[multiplier] || 0;
 
       if (stake <= 0) return { target: 'SKIP', amount: 0 };
 
@@ -617,6 +626,7 @@
       if (er.won) {
         pnl = Math.min(dec.amount * er.mult, bossPurseForCap);
         shadow.win++;
+        if (er.mult >= 2) shadow.multCount[er.mult]++;
       } else {
         pnl = -dec.amount;
         shadow.lose++;
@@ -751,21 +761,26 @@
       let html = '';
       const labels = ['Boss', 'A', 'B', 'C'];
       const labelClasses = ['boss', 'emp-a', 'emp-b', 'emp-c'];
-
+      
+      // 计算庄家战力作为参考基准
+      const bossInfoRef = lookupTier(game.hands[0][0], game.hands[0][1]);
+      const bossMpRef = bossInfoRef ? bossInfoRef.mp : 40;
+      
       for (let i = 0; i < 4; i++) {
         const hand = game.hands[i];
         const v = [hand[0], hand[1]];
         const tierInfo = lookupTier(v[0], v[1]);
-        const tier = tierInfo ? tierInfo.tier : '-';
-
+        const mp = tierInfo ? tierInfo.mp : 40;
+        const powerDiff = mp - bossMpRef;
+      
         const blessings = blessingCards(v[0], v[1], allVisibleCards);
-        const blessingStr = blessings.map(b => `{${b.value}}\u00d7${b.remaining}`).join(' ');
-
+        const blessingStr = blessings.map(b => `{${b.value}}×${b.remaining}`).join(' ');
+      
         const empLabel = labels[i];
         const isEmp = i >= 1;
         const isSelected = isBetting && isEmp && manualTarget === empLabel;
         const clickable = isBetting && isEmp;
-
+      
         let rowClass = 'player-row';
         if (i === 0) rowClass += ' boss-row';
         if (isSelected) rowClass += ' selected-emp';
@@ -781,15 +796,15 @@
             // Boss row: no border highlights
           }
         }
-
+      
         const clickAttr = clickable ? ` onclick="selectEmployee('${empLabel}')"` : '';
-
+      
         html += `<div class="${rowClass}"${clickAttr}>`;
         html += `<div class="player-label ${labelClasses[i]}">${labels[i]}</div>`;
         html += `<div class="cards-display">`;
         html += `<div class="card visible"><span class="card-corner tl">${v[0]}</span><span class="card-center">${v[0]}</span><span class="card-corner br">${v[0]}</span></div>`;
         html += `<div class="card visible"><span class="card-corner tl">${v[1]}</span><span class="card-center">${v[1]}</span><span class="card-corner br">${v[1]}</span></div>`;
-
+      
         if (isRevealed) {
           for (let j = 2; j < 5; j++) {
             html += `<div class="card revealed"><span class="card-corner tl">${hand[j]}</span><span class="card-center">${hand[j]}</span><span class="card-corner br">${hand[j]}</span></div>`;
@@ -800,23 +815,25 @@
           }
         }
         html += `</div>`;
-
-        if (showTier && tierInfo) {
-          const starLbl = tierInfo.tier + '星';
-          html += `<div class="tier-info-col">`;
-          html += `<span class="tier-badge tier-${tierInfo.tier}">${starLbl}</span>`;
-          html += `<div class="blessing-hint"><span class="mn-tag">${tierInfo.mn}</span> <span class="mp-tag">${tierInfo.mp}%</span></div>`;
-          html += `</div>`;
-        } else if (isBetting && isSelected && tierInfo) {
-          const starLbl = tierInfo.tier + '星';
-          html += `<div class="tier-info-col">`;
-          html += `<span class="tier-badge tier-${tierInfo.tier}">${starLbl}</span>`;
-          html += `<div class="blessing-hint"><span class="mn-tag">${tierInfo.mn}</span> <span class="mp-tag">${tierInfo.mp}%</span></div>`;
-          html += `</div>`;
+      
+        // 战力数值
+        html += `<span class="power-value">${mp}</span>`;
+      
+        // 与庄家的战力差
+        if (i > 0) {
+          const diffClass = powerDiff > 0 ? 'positive' : powerDiff < 0 ? 'negative' : 'zero';
+          const diffSign = powerDiff > 0 ? '+' : '';
+          html += `<span class="power-diff ${diffClass}">${diffSign}${powerDiff}</span>`;
         } else {
-          html += `<div class="blessing-hint">${blessingStr || '-'}</div>`;
+          html += `<span class="power-diff boss-label">庄</span>`;
         }
-
+      
+        // 口诀移至右侧
+        html += `<span class="mnemonic-right">${tierInfo ? tierInfo.mn : '-'}</span>`;
+      
+        // 福星卡提示
+        html += `<div class="blessing-hint">${blessingStr || '-'}</div>`;
+      
         html += `</div>`;
       }
 
@@ -970,14 +987,12 @@
       let html = '<div class="stake-picker">';
 
       if (game.kellyMode) {
-        html += `<span class="stake-picker-label">押${target}</span>`;
         html += `<button class="bet-btn btn-stake-opt" onclick="onBetAndReset('${target}',${ks})">$${ks}</button>`;
       } else {
         const validStakes = STAKE_OPTIONS.filter(s => s <= game.obsPurse && s <= game.bossPurse);
-        html += `<span class="stake-picker-label">押${target}</span>`;
         for (const s of validStakes) {
-          if (s === 16) {
-            html += `<button class="bet-btn btn-stake-opt btn-stake-max" onclick="confirmStake16('${target}')">$${s}</button>`;
+          if (s === 20) {
+            html += `<button class="bet-btn btn-stake-opt btn-stake-max" onclick="confirmStake20('${target}')">$${s}</button>`;
           } else {
             html += `<button class="bet-btn btn-stake-opt" onclick="onBetAndReset('${target}',${s})">$${s}</button>`;
           }
@@ -999,6 +1014,14 @@
       if (confirm('投注 $16 — 确认大注？')) {
         manualTarget = null;
         onBet(target, 16);
+      }
+    }
+
+    function confirmStake20(target) {
+      tap();
+      if (confirm('投注 $20 — 确认超大注？')) {
+        manualTarget = null;
+        onBet(target, 20);
       }
     }
 
@@ -1070,6 +1093,11 @@
           <div class="stat-value">A${game.stats.flatEat.A} B${game.stats.flatEat.B} C${game.stats.flatEat.C}</div>
           <div class="stat-label">平吃 (同点/同无斗口)</div>
           <div class="stat-shadow">计入obs: ${game.stats.flatEat.obs}局</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">2×${game.stats.multCount[2]} 3×${game.stats.multCount[3]} 4×${game.stats.multCount[4]}</div>
+          <div class="stat-label">多倍</div>
+          <div class="stat-shadow">2×${shadow.multCount[2]} 3×${shadow.multCount[3]} 4×${shadow.multCount[4]}</div>
         </div>
       `;
 
